@@ -17,7 +17,7 @@ export default async function Catalogo({ searchParams }: { searchParams: Promise
   const c = await db();
   const r = await buscarProductos(c, {
     q: sp.q, tipo: sp.tipo, estatus: sp.estatus, etiqueta: sp.etiqueta, area: sp.area,
-    sinCodigo: sp.sin_codigo === '1', controlado: sp.controlado === '1', pagina: Number(sp.pagina) || 1,
+    sinCodigo: sp.sin_codigo === '1', controlado: sp.controlado === '1', cuadroBasico: sp.cuadro_basico === '1', antibiotico: sp.antibiotico === '1', pagina: Number(sp.pagina) || 1,
   });
   const etiquetas = (await c.query<{ codigo: string; nombre: string }>('SELECT codigo, nombre FROM etiquetas WHERE activa ORDER BY id')).rows;
   const filtros = { ...sp };
@@ -40,6 +40,8 @@ export default async function Catalogo({ searchParams }: { searchParams: Promise
         <div className="flex flex-wrap items-center gap-3">
           <label className="flex items-center gap-1.5 text-[13px] text-tenue"><input type="checkbox" name="sin_codigo" value="1" defaultChecked={sp.sin_codigo === '1'} className="h-4 w-4 accent-clinico" />Sin código</label>
           <label className="flex items-center gap-1.5 text-[13px] text-tenue"><input type="checkbox" name="controlado" value="1" defaultChecked={sp.controlado === '1'} className="h-4 w-4 accent-clinico" />Controlados</label>
+          <label className="flex items-center gap-1.5 text-[13px] text-tenue"><input type="checkbox" name="cuadro_basico" value="1" defaultChecked={sp.cuadro_basico === '1'} className="h-4 w-4 accent-clinico" />Cuadro básico</label>
+          <label className="flex items-center gap-1.5 text-[13px] text-tenue"><input type="checkbox" name="antibiotico" value="1" defaultChecked={sp.antibiotico === '1'} className="h-4 w-4 accent-clinico" />Antibióticos</label>
           <button className="btn-secundario">Filtrar</button>
         </div>
       </form>
@@ -70,6 +72,7 @@ export default async function Catalogo({ searchParams }: { searchParams: Promise
                         {p.estatus !== 'activo' && <Insignia tono="neutro">{p.estatus === 'inactivo' ? 'Inactivo' : 'Descontinuado'}</Insignia>}
                         {p.tipo !== 'medicamento' && <Insignia tono="info">{TIPOS[p.tipo]}</Insignia>}
                         {p.controlado && <Controlado grupo={p.grupo_controlado} />}
+                        {p.cuadro_basico && <Insignia tono="info">Cuadro básico</Insignia>}
                         {p.etiquetas.map((e) => <EtiquetaProducto key={e.codigo} e={e} />)}
                       </span>
                     </td>

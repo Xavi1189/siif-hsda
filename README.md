@@ -116,7 +116,7 @@ Nunca se guardan credenciales en el código ni en el repositorio (`.env*` está 
 ## 7. Pruebas
 
 ```bash
-npm test          # 63 pruebas sobre PostgreSQL real (PGlite), sin configurar nada
+npm test          # 64 pruebas sobre PostgreSQL real (PGlite), sin configurar nada
 npm run typecheck
 npm run build
 ```

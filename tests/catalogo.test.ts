@@ -89,6 +89,18 @@ describe('productos', () => {
     expect([p.controlado, p.grupo_controlado]).toEqual([false, null]);
     expect((await obtenerProducto(db, id))!.historial[0].accion).toBe('producto.controlado');
   });
+  it('filtra por cuadro básico y por antibióticos', async () => {
+    const id = (await db.query<{ id: number }>(`SELECT id FROM productos WHERE clave = 'X100'`)).rows[0].id;
+    const cb = await buscarProductos(db, { cuadroBasico: true });
+    expect(cb.filas.map((f) => f.clave)).toContain('X100');
+    expect(cb.filas.every((f) => f.cuadro_basico)).toBe(true);
+    expect((await buscarProductos(db, { antibiotico: true })).total).toBe(0);
+    const ab = (await db.query<{ id: number }>(`SELECT id FROM etiquetas WHERE codigo = 'ANTIBIOTICO'`)).rows[0].id;
+    await db.tx((tx) => cambiarEtiqueta(tx, admin, id, ab, true));
+    const r = await buscarProductos(db, { antibiotico: true });
+    expect(r.filas.map((f) => f.clave)).toEqual(['X100']);
+    await db.tx((tx) => cambiarEtiqueta(tx, admin, id, ab, false));
+  });
   it('etiquetas de seguridad: antibiótico disponible; electrolito concentrado incluido en alto riesgo', async () => {
     const id = (await db.query<{ id: number }>(`SELECT id FROM productos WHERE clave = 'X100'`)).rows[0].id;
     const codigos = (await obtenerProducto(db, id))!.etiquetas.map((e) => e.codigo);
