@@ -8,8 +8,6 @@ export function PantallaAcceso({ institucion, sistema, siglas, tieneLogo, titulo
   return (
     <main className="grid min-h-screen lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
       <aside className="relative hidden overflow-hidden bg-marino text-white lg:flex lg:flex-col lg:justify-between lg:p-12">
-        <div aria-hidden className="pointer-events-none absolute inset-0 opacity-[0.07]"
-          style={{ backgroundImage: 'repeating-linear-gradient(90deg,#fff 0 1px,transparent 1px 3px,#fff 3px 5px,transparent 5px 9px,#fff 9px 10px,transparent 10px 14px)', backgroundSize: '100% 38%', backgroundRepeat: 'no-repeat', backgroundPosition: 'bottom' }} />
         <div className="relative">
           {/* Imagotipo blanco del Manual de Identidad HSDA; el archivo conserva el área de respeto (1x) */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
