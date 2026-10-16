@@ -101,6 +101,14 @@ describe('productos', () => {
     expect([p.controlado, p.grupo_controlado]).toEqual([false, null]);
     expect((await obtenerProducto(db, id))!.historial[0].accion).toBe('producto.controlado');
   });
+  it('filtra por productos con y sin código vinculado', async () => {
+    const con = await buscarProductos(db, { conCodigo: true, porPagina: 200 });
+    const sin = await buscarProductos(db, { sinCodigo: true, porPagina: 200 });
+    const todos = await buscarProductos(db, {});
+    expect(con.total + sin.total).toBe(todos.total);
+    expect(con.filas.every((f) => f.codigos > 0)).toBe(true);
+    expect(sin.filas.every((f) => f.codigos === 0)).toBe(true);
+  });
   it('filtra por cuadro básico y por antibióticos', async () => {
     const id = (await db.query<{ id: number }>(`SELECT id FROM productos WHERE clave = 'X100'`)).rows[0].id;
     const cb = await buscarProductos(db, { cuadroBasico: true });

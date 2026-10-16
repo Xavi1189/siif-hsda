@@ -100,7 +100,7 @@ export function Kpi({ icono, rotulo, valor, detalle, tono = 'neutro', href }: {
     <>
       <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-full sm:h-12 sm:w-12 ${fondo}`} aria-hidden>{icono}</span>
       <span className="min-w-0">
-        <span className="block text-[13px] text-tenue">{rotulo}</span>
+        <span className="block text-[13px] leading-tight text-tenue">{rotulo}</span>
         <span className="block font-titulo text-[22px] sm:text-[26px] font-semibold leading-tight tabular-nums text-marino">{valor}</span>
         {detalle && <span className="block text-[12px] text-tenue">{detalle}</span>}
       </span>

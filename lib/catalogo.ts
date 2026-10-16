@@ -20,7 +20,7 @@ function exigir(a: Actor, p: Parameters<typeof tienePermiso>[1]) {
 // ---------------------------------------------------------------------------
 export interface FiltroCatalogo {
   q?: string; tipo?: string; estatus?: string; etiqueta?: string; area?: string; grupo?: string;
-  sinCodigo?: boolean; controlado?: boolean; cuadroBasico?: boolean; antibiotico?: boolean; pagina?: number; porPagina?: number;
+  sinCodigo?: boolean; conCodigo?: boolean; controlado?: boolean; cuadroBasico?: boolean; antibiotico?: boolean; pagina?: number; porPagina?: number;
 }
 export interface FilaCatalogo {
   id: number; clave: string; descripcion: string; tipo: string; unidad_minima: string; estatus: string;
@@ -47,6 +47,7 @@ export async function buscarProductos(tx: Tx, f: FiltroCatalogo): Promise<{ fila
   if (f.grupo) { p.push(f.grupo); cond.push(`pr.grupo_terapeutico = $${p.length}`); }
   if (f.antibiotico) cond.push(`EXISTS (SELECT 1 FROM producto_etiquetas pe JOIN etiquetas e ON e.id = pe.etiqueta_id WHERE pe.producto_id = pr.id AND e.codigo = 'ANTIBIOTICO')`);
   if (f.sinCodigo) cond.push('NOT EXISTS (SELECT 1 FROM codigos_barras cb WHERE cb.producto_id = pr.id AND cb.activo)');
+  if (f.conCodigo) cond.push('EXISTS (SELECT 1 FROM codigos_barras cb WHERE cb.producto_id = pr.id AND cb.activo)');
   if (f.etiqueta) {
     p.push(f.etiqueta);
     cond.push(`EXISTS (SELECT 1 FROM producto_etiquetas pe JOIN etiquetas e ON e.id = pe.etiqueta_id WHERE pe.producto_id = pr.id AND e.codigo = $${p.length})`);

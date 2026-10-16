@@ -30,7 +30,7 @@ export default async function Catalogo({ searchParams }: { searchParams: Promise
   const c = await db();
   const r = await buscarProductos(c, {
     q: sp.q, grupo: sp.grupo, tipo: sp.tipo, estatus: sp.estatus, etiqueta: sp.etiqueta, area: sp.area,
-    sinCodigo: sp.sin_codigo === '1', controlado: sp.controlado === '1', cuadroBasico: sp.cuadro_basico === '1', antibiotico: sp.antibiotico === '1', pagina: Number(sp.pagina) || 1,
+    sinCodigo: sp.sin_codigo === '1', conCodigo: sp.con_codigo === '1', controlado: sp.controlado === '1', cuadroBasico: sp.cuadro_basico === '1', antibiotico: sp.antibiotico === '1', pagina: Number(sp.pagina) || 1,
   });
   const etiquetas = (await c.query<{ codigo: string; nombre: string }>('SELECT codigo, nombre FROM etiquetas WHERE activa ORDER BY id')).rows;
   const porGrupo = (await c.query<{ g: string; n: number }>(
@@ -57,10 +57,11 @@ export default async function Catalogo({ searchParams }: { searchParams: Promise
       <Encabezado titulo="Catálogo" descripcion="Medicamentos, dispositivos médicos e insumos de ambas farmacias. Busca por clave, nombre, laboratorio, código de barras o localización del SIHO."
         acciones={tienePermiso(u.rol, 'catalogo.editar') && <Link href="/catalogo/nuevo" className="btn-primario"><Plus size={16} aria-hidden />Nuevo producto</Link>} />
 
-      <div className="mb-4 grid grid-cols-2 gap-3 xl:grid-cols-4">
+      <div className="mb-4 grid grid-cols-2 gap-3 xl:grid-cols-5 [&>*:first-child]:col-span-2 xl:[&>*:first-child]:col-span-1">
         <Kpi icono={<Package size={22} />} rotulo="Productos activos" valor={num(k.total)} href="/catalogo#productos" />
         <Kpi icono={<ShieldAlert size={22} />} tono="peligro" rotulo="Controlados" valor={num(k.controlados)} href="/catalogo?controlado=1#productos" />
         <Kpi icono={<BadgeCheck size={22} />} tono="info" rotulo="Cuadro básico" valor={num(k.cuadro)} detalle={`${num(k.antibioticos)} con etiqueta de antibiótico`} href="/catalogo?cuadro_basico=1#productos" />
+        <Kpi icono={<ScanBarcode size={22} />} tono="exito" rotulo="Con código vinculado" valor={num(k.total - k.sin_codigo)} href="/catalogo?con_codigo=1#productos" />
         <Kpi icono={<ScanBarcode size={22} />} tono="alerta" rotulo="Sin código de barras" valor={num(k.sin_codigo)} href="/catalogo?sin_codigo=1#productos" />
       </div>
 
@@ -99,6 +100,7 @@ export default async function Catalogo({ searchParams }: { searchParams: Promise
         <Seleccion nombre="estatus" valor={sp.estatus} rotulo="Estatus" opciones={[['', 'Cualquier estatus'], ['activo', 'Activo'], ['inactivo', 'Inactivo'], ['descontinuado', 'Descontinuado']]} />
         <div className="flex flex-wrap items-center gap-3">
           <label className="flex items-center gap-1.5 text-[13px] text-tenue"><input type="checkbox" name="sin_codigo" value="1" defaultChecked={sp.sin_codigo === '1'} className="h-4 w-4 accent-clinico" />Sin código</label>
+          <label className="flex items-center gap-1.5 text-[13px] text-tenue"><input type="checkbox" name="con_codigo" value="1" defaultChecked={sp.con_codigo === '1'} className="h-4 w-4 accent-clinico" />Con código</label>
           <label className="flex items-center gap-1.5 text-[13px] text-tenue"><input type="checkbox" name="controlado" value="1" defaultChecked={sp.controlado === '1'} className="h-4 w-4 accent-clinico" />Controlados</label>
           <label className="flex items-center gap-1.5 text-[13px] text-tenue"><input type="checkbox" name="cuadro_basico" value="1" defaultChecked={sp.cuadro_basico === '1'} className="h-4 w-4 accent-clinico" />Cuadro básico</label>
           <label className="flex items-center gap-1.5 text-[13px] text-tenue"><input type="checkbox" name="antibiotico" value="1" defaultChecked={sp.antibiotico === '1'} className="h-4 w-4 accent-clinico" />Antibióticos</label>
