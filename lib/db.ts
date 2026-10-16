@@ -7,7 +7,13 @@ import { crearConexion, type Db } from './db-core';
  */
 const g = globalThis as unknown as { __siifDb?: Promise<Db> };
 
+/** En Vercel sin base de datos conectada no se puede usar la base embebida (disco de solo lectura). */
+export function faltaBaseDeDatos(): boolean {
+  return !!process.env.VERCEL && !process.env.DATABASE_URL;
+}
+
 export function db(): Promise<Db> {
+  if (faltaBaseDeDatos()) return Promise.reject(new Error('SIIF: falta conectar la base de datos (DATABASE_URL).'));
   if (!g.__siifDb) {
     g.__siifDb = crearConexion({
       url: process.env.DATABASE_URL || undefined,

@@ -15,7 +15,7 @@ export const NOMBRE_ROL: Record<Rol, string> = {
 export const PERMISOS = {
   'catalogo.ver': 'Consultar el catálogo',
   'catalogo.editar': 'Crear y editar productos, presentaciones y parámetros',
-  'catalogo.etiquetas': 'Asignar etiquetas LASA, alto riesgo, cadena fría y controlado',
+  'catalogo.etiquetas': 'Asignar etiquetas LASA, alto riesgo, cadena fría y grupo de controlado',
   'codigos.vincular': 'Vincular códigos de barras (quedan verificados)',
   'codigos.proponer': 'Proponer vínculos de código (quedan sin verificar)',
   'codigos.verificar': 'Verificar o desactivar vínculos de código',
@@ -32,7 +32,8 @@ const TODOS = Object.keys(PERMISOS) as Permiso[];
 const MATRIZ: Record<Rol, readonly Permiso[]> = {
   administrador: TODOS,
   responsable_sanitario: TODOS,
-  encargado: ['catalogo.ver', 'catalogo.editar', 'catalogo.etiquetas', 'codigos.vincular', 'codigos.proponer', 'codigos.verificar', 'lector.usar'],
+  // Las etiquetas de seguridad y el grupo de controlados los define el Responsable Sanitario
+  encargado: ['catalogo.ver', 'catalogo.editar', 'codigos.vincular', 'codigos.proponer', 'codigos.verificar', 'lector.usar'],
   auxiliar: ['catalogo.ver', 'codigos.proponer', 'lector.usar'],
   auditor: ['catalogo.ver', 'auditoria.ver', 'lector.usar'],
   consulta: ['catalogo.ver'],

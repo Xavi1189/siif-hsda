@@ -66,7 +66,7 @@ export default async function Producto({ params }: { params: Promise<{ id: strin
           <Seccion titulo="Presentaciones y conversión">
             <Presentaciones id={p.id} unidad={p.unidad_minima} presentaciones={d.presentaciones} editable={editable} />
           </Seccion>
-          <Seccion titulo="Etiquetas de seguridad" descripcion="Se muestran con ícono y texto al seleccionar o surtir el producto.">
+          <Seccion titulo="Etiquetas de seguridad" descripcion="Las asigna el Responsable Sanitario. Se muestran con ícono y texto al seleccionar o surtir el producto.">
             <Etiquetas id={p.id} etiquetas={d.etiquetas} editable={tienePermiso(u.rol, 'catalogo.etiquetas')} />
           </Seccion>
           <Seccion titulo="Lotes y existencias">

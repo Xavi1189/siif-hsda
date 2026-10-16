@@ -6,6 +6,10 @@ import { guardarProductoAccion } from '@/app/(sistema)/acciones';
 import { useAccion } from '../useAccion';
 import { Aviso } from '../ui';
 
+/** Unidades dispensables más comunes; se puede escribir otra. */
+const UNIDADES = ['TABLETA', 'CÁPSULA', 'GRAGEA', 'COMPRIMIDO', 'AMPULA', 'FRASCO ÁMPULA', 'JERINGA PRELLENADA', 'FRASCO', 'BOLSA', 'SOBRE',
+  'SUPOSITORIO', 'ÓVULO', 'PARCHE', 'TUBO', 'INHALADOR', 'PLUMA PRECARGADA', 'CARTUCHO', 'BOTELLA', 'LATA', 'PIEZA'];
+
 export type DatosFormulario = Record<string, string | boolean | null>;
 
 const VACIO: DatosFormulario = {
@@ -65,7 +69,10 @@ export function FormularioProducto({ id, inicial, editable, puedeControlado }: {
         {txt('concentracion', 'Concentración')}
         {txt('forma_farmaceutica', 'Forma farmacéutica')}
         {txt('presentacion', 'Presentación comercial')}
-        {txt('unidad_minima', 'Unidad mínima dispensable', { required: true, placeholder: 'AMPULA, TABLETA, PIEZA…' })}
+        {txt('unidad_minima', 'Unidad mínima dispensable', { required: true, placeholder: 'Elige o escribe', list: 'unidades-minimas' })}
+        <datalist id="unidades-minimas">
+          {UNIDADES.map((u) => <option key={u} value={u} />)}
+        </datalist>
       </fieldset>
 
       <fieldset className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" disabled={!editable || pendiente}>
@@ -90,7 +97,7 @@ export function FormularioProducto({ id, inicial, editable, puedeControlado }: {
         <label className={`flex items-start gap-2 rounded-md border px-3 py-2.5 text-[14px] ${d.controlado ? 'border-peligro/40 bg-peligro-claro' : 'border-linea'}`}>
           <input type="checkbox" className="mt-0.5 h-4 w-4 accent-[#B42318]" checked={!!d.controlado} disabled={!puedeControlado}
             onChange={(e) => { set('controlado', e.target.checked); if (!e.target.checked) set('grupo_controlado', null); }} />
-          <span>Medicamento controlado<span className="block text-[12px] text-tenue">{puedeControlado ? 'Activa controles especiales.' : 'Solo encargado, RS o administrador.'}</span></span>
+          <span>Medicamento controlado<span className="block text-[12px] text-tenue">{puedeControlado ? 'Activa controles especiales.' : 'Lo define el Responsable Sanitario.'}</span></span>
         </label>
         <div>
           <label htmlFor="p-grupo" className="etiqueta-campo">Grupo (si es controlado)</label>

@@ -100,7 +100,8 @@ describe('productos', () => {
     const id = (await db.query<{ id: number }>(`SELECT id FROM productos WHERE clave = 'X100'`)).rows[0].id;
     const lasa = (await db.query<{ id: number }>(`SELECT id FROM etiquetas WHERE codigo = 'LASA'`)).rows[0].id;
     await expect(cambiarEtiqueta(db, auxiliar, id, lasa, true)).rejects.toThrow(/permiso/);
-    await cambiarEtiqueta(db, encargado, id, lasa, true);
+    await expect(cambiarEtiqueta(db, encargado, id, lasa, true)).rejects.toThrow(/permiso/);
+    await cambiarEtiqueta(db, admin, id, lasa, true);
     const r = await buscarPorCodigo(db, 'X100');
     expect(r.encontrado?.etiquetas.map((e) => e.codigo)).toEqual(['LASA']);
     expect(r.encontrado?.etiquetas[0].advertencia).toMatch(/LASA/);
@@ -173,6 +174,7 @@ describe('matriz de permisos', () => {
     expect(ROLES.filter((r) => tienePermiso(r, 'usuarios.administrar'))).toEqual(['administrador', 'responsable_sanitario']);
     expect(ROLES.filter((r) => tienePermiso(r, 'catalogo.editar'))).toEqual(['administrador', 'responsable_sanitario', 'encargado']);
     expect(ROLES.filter((r) => tienePermiso(r, 'auditoria.ver'))).toEqual(['administrador', 'responsable_sanitario', 'auditor']);
+    expect(ROLES.filter((r) => tienePermiso(r, 'catalogo.etiquetas'))).toEqual(['administrador', 'responsable_sanitario']);
     expect(ROLES.every((r) => tienePermiso(r, 'catalogo.ver'))).toBe(true);
     expect(tienePermiso('consulta', 'lector.usar')).toBe(false);
     expect(tienePermiso('desconocido', 'catalogo.ver')).toBe(false);
