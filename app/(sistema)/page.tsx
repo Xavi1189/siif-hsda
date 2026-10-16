@@ -64,7 +64,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
           calculo="Productos activos con al menos un código de barras vinculado ÷ productos activos." />
         <Indicador icono={<Tags size={18} />} rotulo="Productos etiquetados" valor={num(k.con_etiqueta)}
           detalle={`${num(k.controlados)} marcados como controlados`}
-          calculo="Productos con al menos una etiqueta (LASA, alto riesgo, cadena fría, electrolito). Controlados se cuenta aparte." />
+          calculo="Productos con al menos una etiqueta (LASA, alto riesgo, cadena fría, antibiótico). Controlados se cuenta aparte." />
         <Indicador icono={<Users size={18} />} rotulo="Usuarios activos" valor={num(k.usuarios)}
           detalle={k.sin_verificar ? `${num(k.sin_verificar)} códigos por verificar` : 'Sin códigos pendientes de verificar'}
           calculo="Cuentas activas. Los códigos propuestos por auxiliares quedan pendientes hasta que un encargado los verifica." />

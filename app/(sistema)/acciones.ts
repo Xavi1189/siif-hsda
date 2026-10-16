@@ -5,7 +5,7 @@ import { db } from '@/lib/db';
 import { exigirUsuario } from '@/lib/servidor';
 import { tienePermiso } from '@/lib/permisos';
 import {
-  agregarPresentacion, buscarPorCodigo, cambiarEtiqueta, desactivarCodigo, desactivarPresentacion, guardarParametrosArea,
+  agregarPresentacion, buscarPorCodigo, cambiarControlado, cambiarEtiqueta, desactivarCodigo, desactivarPresentacion, guardarParametrosArea,
   guardarProducto, sugerirProductos, verificarCodigo, vincularCodigo, ErrorNegocio, type ResultadoLectura,
 } from '@/lib/catalogo';
 import { importarCatalogoSiho, type CorteSiho, type ResumenImportacion } from '@/lib/siho';
@@ -50,6 +50,13 @@ export async function desactivarPresentacionAccion(productoId: number, presentac
 export async function etiquetaAccion(productoId: number, etiquetaId: number, asignar: boolean) {
   const r = await accion('catalogo.etiquetas', (tx, a) => cambiarEtiqueta(tx, a, productoId, etiquetaId, asignar));
   revalidatePath(`/catalogo/${productoId}`);
+  return r;
+}
+export async function controladoAccion(productoId: number, controlado: boolean, grupo: string | null) {
+  const r = await accion('catalogo.etiquetas', (tx, a) => cambiarControlado(tx, a, Number(productoId), !!controlado, grupo ? String(grupo) : null),
+    controlado ? 'Marcado como controlado' : 'Ya no está marcado como controlado');
+  revalidatePath(`/catalogo/${productoId}`);
+  revalidatePath('/catalogo');
   return r;
 }
 export async function parametrosAccion(productoId: number, areaId: number, datos: Record<string, unknown>) {

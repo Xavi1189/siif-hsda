@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { CircleAlert, CircleCheck, Eye, FlaskConical, Info, Snowflake, Tag, TriangleAlert, ShieldAlert } from 'lucide-react';
+import { CircleAlert, CircleCheck, Eye, FlaskConical, Info, Snowflake, Tag, TriangleAlert, ShieldAlert, Pill } from 'lucide-react';
 
 export function Encabezado({ titulo, descripcion, acciones, migas }: { titulo: string; descripcion?: ReactNode; acciones?: ReactNode; migas?: ReactNode }) {
   return (
@@ -32,7 +32,7 @@ export function Insignia({ tono = 'neutro', children, icono, titulo }: { tono?: 
   );
 }
 
-const ICONOS: Record<string, typeof Tag> = { eye: Eye, 'triangle-alert': TriangleAlert, snowflake: Snowflake, 'flask-conical': FlaskConical, tag: Tag, 'shield-alert': ShieldAlert };
+const ICONOS: Record<string, typeof Tag> = { eye: Eye, 'triangle-alert': TriangleAlert, snowflake: Snowflake, 'flask-conical': FlaskConical, tag: Tag, 'shield-alert': ShieldAlert, pill: Pill };
 
 /** Etiqueta de producto: siempre ícono + texto, nunca solo color. */
 export function EtiquetaProducto({ e }: { e: { codigo: string; nombre: string; icono: string; tono: string } }) {

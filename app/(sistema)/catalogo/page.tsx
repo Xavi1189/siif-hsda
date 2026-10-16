@@ -57,14 +57,15 @@ export default async function Catalogo({ searchParams }: { searchParams: Promise
           </Vacio>
         ) : (
           <div className="overflow-x-auto">
-            <table className="tabla min-w-[860px]">
-              <thead><tr><th>Clave</th><th>Descripción</th><th>Presentación</th><th>Ubicación SIHO</th><th className="num">Costo unitario</th><th>Códigos</th></tr></thead>
+            <table className="tabla min-w-[640px]">
+              <thead><tr><th className="w-[1%]">Clave</th><th>Descripción</th><th className="w-[22%]">Ubicación SIHO</th><th className="num w-[1%] whitespace-nowrap">Costo</th><th className="w-[1%] whitespace-nowrap">Códigos</th></tr></thead>
               <tbody>
                 {r.filas.map((p) => (
                   <tr key={p.id} className="relative">
                     <td className="whitespace-nowrap font-mono text-[13px]"><Link href={`/catalogo/${p.id}`} className="text-clinico after:absolute after:inset-0 hover:underline">{p.clave}</Link></td>
-                    <td className="min-w-[280px]">
+                    <td>
                       <span className="font-medium">{p.descripcion}</span>
+                      <span className="block text-[13px] text-tenue">{p.unidad_minima.toLowerCase()}{p.factor ? <> · {p.presentacion?.toLowerCase()} c/{p.factor}</> : null}</span>
                       <span className="mt-1 flex flex-wrap gap-1">
                         {p.estatus !== 'activo' && <Insignia tono="neutro">{p.estatus === 'inactivo' ? 'Inactivo' : 'Descontinuado'}</Insignia>}
                         {p.tipo !== 'medicamento' && <Insignia tono="info">{TIPOS[p.tipo]}</Insignia>}
@@ -72,11 +73,10 @@ export default async function Catalogo({ searchParams }: { searchParams: Promise
                         {p.etiquetas.map((e) => <EtiquetaProducto key={e.codigo} e={e} />)}
                       </span>
                     </td>
-                    <td className="whitespace-nowrap text-[13px]">{p.unidad_minima.toLowerCase()}{p.factor ? <span className="text-tenue"> · {p.presentacion?.toLowerCase()} c/{p.factor}</span> : null}</td>
                     <td className="text-[13px] text-tenue">{p.ubicaciones.map((x) => <span key={x.area} className="block"><span className="font-mono text-[11px] text-marino-300">{x.area}</span> {x.ubicacion ?? '—'}</span>)}</td>
-                    <td className="num font-mono text-[13px]">{mxn(p.costo_unitario)}</td>
+                    <td className="num whitespace-nowrap font-mono text-[13px]">{mxn(p.costo_unitario)}</td>
                     <td className="whitespace-nowrap text-[13px]">
-                      {p.codigos ? <span>{p.codigos}{p.codigos_sin_verificar ? <span className="ml-1"><Insignia tono="alerta">{p.codigos_sin_verificar} por verificar</Insignia></span> : null}</span> : <span className="text-tenue">Sin código</span>}
+                      {p.codigos ? <span>{p.codigos}{p.codigos_sin_verificar ? <span className="ml-1"><Insignia tono="alerta">{p.codigos_sin_verificar} por verificar</Insignia></span> : null}</span> : <span className="text-tenue">—</span>}
                     </td>
                   </tr>
                 ))}

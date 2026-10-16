@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import type { Db } from '@/lib/db-core';
 import { baseDePrueba, crearUsuarioPrueba } from './helpers';
 import {
-  agregarPresentacion, buscarPorCodigo, buscarProductos, cambiarEtiqueta, desactivarCodigo, guardarParametrosArea,
+  agregarPresentacion, buscarPorCodigo, buscarProductos, cambiarControlado, cambiarEtiqueta, desactivarCodigo, guardarParametrosArea,
   guardarProducto, obtenerProducto, verificarCodigo, vincularCodigo, type Actor,
 } from '@/lib/catalogo';
 import { importarCatalogoSiho, type CorteSiho } from '@/lib/siho';
@@ -14,7 +14,7 @@ let admin: Actor, encargado: Actor, auxiliar: Actor, consulta: Actor;
 const corte: CorteSiho = JSON.parse(fs.readFileSync('data/siho-catalogo-2026-10-15.json', 'utf8'));
 const base = {
   clave: 'X100', tipo: 'medicamento', descripcion: 'Ketorolaco 30mg/1ml sol iny', unidad_minima: 'ampula', costo_unitario: 12.5,
-  controlado: false, grupo_controlado: null, requiere_lote: true, requiere_caducidad: true, estatus: 'activo',
+  cuadro_basico: true, requiere_lote: true, requiere_caducidad: true, estatus: 'activo',
 };
 
 beforeAll(async () => {
@@ -58,10 +58,11 @@ describe('productos', () => {
     expect(d?.presentaciones).toEqual([expect.objectContaining({ nombre: 'AMPULA', factor: 1 })]);
     expect(d?.historial[0].accion).toBe('producto.crear');
   });
-  it('rechaza costo negativo, clave duplicada y grupo de controlado incoherente', async () => {
+  it('rechaza costo negativo y clave duplicada; guarda cuadro básico', async () => {
     await expect(guardarProducto(db, encargado, { ...base, clave: 'X101', costo_unitario: -1 })).rejects.toThrow(/negativo/);
     await expect(guardarProducto(db, encargado, base)).rejects.toThrow(/Ya existe/);
-    await expect(guardarProducto(db, admin, { ...base, clave: 'X102', controlado: true, grupo_controlado: null })).rejects.toThrow(/grupo/);
+    const id = (await db.query<{ id: number }>(`SELECT id FROM productos WHERE clave = 'X100'`)).rows[0].id;
+    expect((await obtenerProducto(db, id))!.producto.cuadro_basico).toBe(true);
   });
   it('registra en la bitácora solo los campos que cambiaron', async () => {
     const id = (await db.query<{ id: number }>(`SELECT id FROM productos WHERE clave = 'X100'`)).rows[0].id;
@@ -74,10 +75,24 @@ describe('productos', () => {
     await expect(guardarProducto(db, auxiliar, { ...base, clave: 'X103' })).rejects.toThrow(/permiso/);
     await expect(guardarProducto(db, consulta, { ...base, clave: 'X104' })).rejects.toThrow(/permiso/);
   });
-  it('marcar como controlado requiere un rol con permiso de etiquetas sensibles', async () => {
+  it('marcar como controlado exige grupo y un rol con permiso de etiquetas sensibles', async () => {
     const id = (await db.query<{ id: number }>(`SELECT id FROM productos WHERE clave = 'X100'`)).rows[0].id;
-    await guardarProducto(db, admin, { ...base, costo_unitario: 13, controlado: true, grupo_controlado: 'II' }, id);
+    await expect(db.tx((tx) => cambiarControlado(tx, encargado, id, true, 'II'))).rejects.toThrow(/permiso/);
+    await expect(db.tx((tx) => cambiarControlado(tx, admin, id, true, null))).rejects.toThrow(/grupo/);
+    await db.tx((tx) => cambiarControlado(tx, admin, id, true, 'II'));
     expect((await obtenerProducto(db, id))!.producto.grupo_controlado).toBe('II');
+    // Editar la ficha no toca la marca de controlado
+    await guardarProducto(db, encargado, { ...base, costo_unitario: 14 }, id);
+    expect((await obtenerProducto(db, id))!.producto.controlado).toBe(true);
+    await db.tx((tx) => cambiarControlado(tx, admin, id, false, 'II'));
+    const p = (await obtenerProducto(db, id))!.producto;
+    expect([p.controlado, p.grupo_controlado]).toEqual([false, null]);
+    expect((await obtenerProducto(db, id))!.historial[0].accion).toBe('producto.controlado');
+  });
+  it('etiquetas de seguridad: antibiótico disponible; electrolito concentrado incluido en alto riesgo', async () => {
+    const id = (await db.query<{ id: number }>(`SELECT id FROM productos WHERE clave = 'X100'`)).rows[0].id;
+    const codigos = (await obtenerProducto(db, id))!.etiquetas.map((e) => e.codigo);
+    expect(codigos).toEqual(['LASA', 'ALTO_RIESGO', 'CADENA_FRIA', 'ANTIBIOTICO']);
   });
   it('valida factores de presentación explícitos', async () => {
     const id = (await db.query<{ id: number }>(`SELECT id FROM productos WHERE clave = 'X100'`)).rows[0].id;

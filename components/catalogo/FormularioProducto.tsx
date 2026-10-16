@@ -14,11 +14,11 @@ export type DatosFormulario = Record<string, string | boolean | null>;
 
 const VACIO: DatosFormulario = {
   clave: '', tipo: 'medicamento', descripcion: '', nombre_generico: '', nombre_comercial: '', concentracion: '', forma_farmaceutica: '',
-  presentacion: '', unidad_minima: '', laboratorio: '', registro_sanitario: '', grupo_terapeutico: '', clasificacion: '',
-  proveedor_principal: '', costo_unitario: '0', controlado: false, grupo_controlado: null, requiere_lote: true, requiere_caducidad: true, estatus: 'activo',
+  presentacion: '', unidad_minima: '', laboratorio: '', registro_sanitario: '', grupo_terapeutico: '',
+  cuadro_basico: false, costo_unitario: '0', requiere_lote: true, requiere_caducidad: true, estatus: 'activo',
 };
 
-export function FormularioProducto({ id, inicial, editable, puedeControlado }: { id: number | null; inicial?: DatosFormulario; editable: boolean; puedeControlado: boolean }) {
+export function FormularioProducto({ id, inicial, editable }: { id: number | null; inicial?: DatosFormulario; editable: boolean }) {
   const router = useRouter();
   const [d, setD] = useState<DatosFormulario>({ ...VACIO, ...inicial });
   const { pendiente, estado, ejecutar } = useAccion();
@@ -35,7 +35,7 @@ export function FormularioProducto({ id, inicial, editable, puedeControlado }: {
 
   const guardar = (e: React.FormEvent) => {
     e.preventDefault();
-    ejecutar(() => guardarProductoAccion(id, { ...d, grupo_controlado: d.controlado ? d.grupo_controlado || null : null }), (nuevo) => {
+    ejecutar(() => guardarProductoAccion(id, d), (nuevo) => {
       if (id == null) router.push(`/catalogo/${nuevo}`); else router.refresh();
     });
   };
@@ -76,12 +76,14 @@ export function FormularioProducto({ id, inicial, editable, puedeControlado }: {
       </fieldset>
 
       <fieldset className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" disabled={!editable || pendiente}>
-        <legend className="rotulo mb-2">Origen y clasificación</legend>
+        <legend className="rotulo mb-2">Origen y cuadro básico</legend>
         {txt('laboratorio', 'Laboratorio / fabricante')}
         {txt('registro_sanitario', 'Registro sanitario')}
         {txt('grupo_terapeutico', 'Grupo terapéutico')}
-        {txt('clasificacion', 'Clasificación institucional')}
-        {txt('proveedor_principal', 'Proveedor principal', { className: 'sm:col-span-2' })}
+        <label className="flex items-start gap-2 rounded-md border border-linea px-3 py-2.5 text-[14px]">
+          <input type="checkbox" className="mt-0.5 h-4 w-4 accent-clinico" checked={!!d.cuadro_basico} onChange={(e) => set('cuadro_basico', e.target.checked)} />
+          <span>Cuadro básico<span className="block text-[12px] text-tenue">Pertenece al cuadro básico de medicamentos.</span></span>
+        </label>
       </fieldset>
 
       <fieldset className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" disabled={!editable || pendiente}>
@@ -94,19 +96,6 @@ export function FormularioProducto({ id, inicial, editable, puedeControlado }: {
           <input type="checkbox" className="mt-0.5 h-4 w-4 accent-clinico" checked={!!d.requiere_caducidad} onChange={(e) => set('requiere_caducidad', e.target.checked)} />
           <span>Requiere caducidad<span className="block text-[12px] text-tenue">Desmárcalo solo en insumos sin caducidad.</span></span>
         </label>
-        <label className={`flex items-start gap-2 rounded-md border px-3 py-2.5 text-[14px] ${d.controlado ? 'border-peligro/40 bg-peligro-claro' : 'border-linea'}`}>
-          <input type="checkbox" className="mt-0.5 h-4 w-4 accent-[#B42318]" checked={!!d.controlado} disabled={!puedeControlado}
-            onChange={(e) => { set('controlado', e.target.checked); if (!e.target.checked) set('grupo_controlado', null); }} />
-          <span>Medicamento controlado<span className="block text-[12px] text-tenue">{puedeControlado ? 'Activa controles especiales.' : 'Lo define el Responsable Sanitario.'}</span></span>
-        </label>
-        <div>
-          <label htmlFor="p-grupo" className="etiqueta-campo">Grupo (si es controlado)</label>
-          <select id="p-grupo" className={`campo ${err('grupo_controlado') ? 'campo-error' : ''}`} value={String(d.grupo_controlado ?? '')}
-            disabled={!d.controlado || !puedeControlado} onChange={(e) => set('grupo_controlado', e.target.value || null)}>
-            <option value="">—</option><option value="I">Grupo I</option><option value="II">Grupo II</option><option value="III">Grupo III</option>
-          </select>
-          {err('grupo_controlado') && <p className="mt-1 text-[12px] text-peligro">{err('grupo_controlado')}</p>}
-        </div>
       </fieldset>
 
       {editable && (

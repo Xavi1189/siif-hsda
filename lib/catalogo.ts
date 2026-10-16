@@ -88,7 +88,7 @@ export interface ProductoDetalle {
 export async function obtenerProducto(tx: Tx, id: number): Promise<ProductoDetalle | null> {
   const pr = (await tx.query<ProductoDetalle['producto']>(
     `SELECT id, clave, tipo, descripcion, nombre_generico, nombre_comercial, concentracion, forma_farmaceutica, presentacion,
-            unidad_minima, laboratorio, registro_sanitario, grupo_terapeutico, clasificacion, proveedor_principal,
+            unidad_minima, laboratorio, registro_sanitario, grupo_terapeutico, cuadro_basico,
             costo_unitario::text, controlado, grupo_controlado, requiere_lote, requiere_caducidad, estatus, origen, creado, actualizado
        FROM productos WHERE id = $1`, [id])).rows[0];
   if (!pr) return null;
@@ -134,30 +134,25 @@ export const esquemaProducto = z.object({
   nombre_generico: texto(150), nombre_comercial: texto(150), concentracion: texto(80),
   forma_farmaceutica: texto(80), presentacion: texto(120),
   unidad_minima: z.string().trim().min(2, 'Indica la unidad mínima dispensable (ampolleta, tableta, pieza…).').max(30).transform((s) => s.toUpperCase()),
-  laboratorio: texto(120), registro_sanitario: texto(60), grupo_terapeutico: texto(120), clasificacion: texto(80), proveedor_principal: texto(120),
+  laboratorio: texto(120), registro_sanitario: texto(60), grupo_terapeutico: texto(120),
+  cuadro_basico: z.coerce.boolean(),
   costo_unitario: z.coerce.number({ invalid_type_error: 'El costo debe ser un número.' }).min(0, 'El costo no puede ser negativo.').max(10_000_000),
-  controlado: z.coerce.boolean(),
-  grupo_controlado: z.enum(['I', 'II', 'III']).nullable().optional(),
   requiere_lote: z.coerce.boolean(),
   requiere_caducidad: z.coerce.boolean(),
   estatus: z.enum(['activo', 'inactivo', 'descontinuado']),
-}).superRefine((d, ctx) => {
-  if (!d.controlado && d.grupo_controlado) ctx.addIssue({ code: 'custom', path: ['grupo_controlado'], message: 'Solo un producto controlado lleva grupo.' });
-  if (d.controlado && !d.grupo_controlado) ctx.addIssue({ code: 'custom', path: ['grupo_controlado'], message: 'Indica el grupo (I, II o III) del medicamento controlado.' });
 });
 export type DatosProducto = z.infer<typeof esquemaProducto>;
 
 const CAMPOS = ['clave', 'tipo', 'descripcion', 'nombre_generico', 'nombre_comercial', 'concentracion', 'forma_farmaceutica', 'presentacion',
-  'unidad_minima', 'laboratorio', 'registro_sanitario', 'grupo_terapeutico', 'clasificacion', 'proveedor_principal', 'costo_unitario',
-  'controlado', 'grupo_controlado', 'requiere_lote', 'requiere_caducidad', 'estatus'] as const;
+  'unidad_minima', 'laboratorio', 'registro_sanitario', 'grupo_terapeutico', 'cuadro_basico', 'costo_unitario',
+  'requiere_lote', 'requiere_caducidad', 'estatus'] as const;
 
 export async function guardarProducto(tx: Tx, a: Actor, entrada: unknown, id?: number): Promise<number> {
   exigir(a, 'catalogo.editar');
   const d = esquemaProducto.parse(entrada);
   const valores = CAMPOS.map((c) => (d as Record<string, unknown>)[c] ?? null);
-  // El cambio de controlado requiere permiso de etiquetas sensibles
+  // Controlado y grupo no se editan aquí: solo con cambiarControlado (permiso de etiquetas sensibles)
   if (id == null) {
-    if (d.controlado) exigir(a, 'catalogo.etiquetas');
     const dup = await tx.query('SELECT 1 FROM productos WHERE clave = $1', [d.clave]);
     if (dup.rows.length) throw new ErrorNegocio(`Ya existe un producto con la clave ${d.clave}.`);
     const r = await tx.query<{ id: number }>(
@@ -176,7 +171,6 @@ export async function guardarProducto(tx: Tx, a: Actor, entrada: unknown, id?: n
     const dup = await tx.query('SELECT 1 FROM productos WHERE clave = $1 AND id <> $2', [d.clave, id]);
     if (dup.rows.length) throw new ErrorNegocio(`Ya existe un producto con la clave ${d.clave}.`);
   }
-  if (antes.controlado !== d.controlado || (antes.grupo_controlado ?? null) !== (d.grupo_controlado ?? null)) exigir(a, 'catalogo.etiquetas');
   if (antes.unidad_minima !== d.unidad_minima) {
     const usado = await tx.query('SELECT 1 FROM movimientos WHERE producto_id = $1 LIMIT 1', [id]);
     if (usado.rows.length) throw new ErrorNegocio('La unidad mínima no se puede cambiar porque ya hay movimientos registrados en esa unidad.');
@@ -191,6 +185,20 @@ export async function guardarProducto(tx: Tx, a: Actor, entrada: unknown, id?: n
   }
   await auditar(tx, { usuarioId: a.id, accion: 'producto.editar', entidad: 'producto', entidadId: id, detalle: { cambios }, ip: a.ip });
   return id;
+}
+
+/** Marca o desmarca un medicamento controlado con su grupo. Solo Responsable Sanitario y administrador. */
+export async function cambiarControlado(tx: Tx, a: Actor, id: number, controlado: boolean, grupo: string | null) {
+  exigir(a, 'catalogo.etiquetas');
+  const g = controlado ? grupo : null;
+  if (controlado && !['I', 'II', 'III'].includes(String(g))) throw new ErrorNegocio('Indica el grupo (I, II o III) del medicamento controlado.');
+  const antes = (await tx.query<{ controlado: boolean; grupo_controlado: string | null }>(
+    'SELECT controlado, grupo_controlado FROM productos WHERE id = $1 FOR UPDATE', [id])).rows[0];
+  if (!antes) throw new ErrorNegocio('El producto no existe.');
+  if (antes.controlado === controlado && (antes.grupo_controlado ?? null) === g) return;
+  await tx.query('UPDATE productos SET controlado = $2, grupo_controlado = $3, actualizado = now(), actualizado_por = $4 WHERE id = $1', [id, controlado, g, a.id]);
+  await auditar(tx, { usuarioId: a.id, accion: 'producto.controlado', entidad: 'producto', entidadId: id,
+    detalle: { antes: { controlado: antes.controlado, grupo: antes.grupo_controlado }, despues: { controlado, grupo: g } }, ip: a.ip });
 }
 
 // ---------------------------------------------------------------------------

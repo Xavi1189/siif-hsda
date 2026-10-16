@@ -13,7 +13,7 @@ export default async function NuevoProducto() {
       <Encabezado migas={<Link href="/catalogo" className="hover:text-clinico hover:underline">Catálogo</Link>} titulo="Nuevo producto"
         descripcion="Usa la misma clave que en el SIHO para poder cuadrar. Después de crearlo podrás agregar presentaciones, códigos y parámetros por área." />
       <Seccion titulo="Datos del producto">
-        <FormularioProducto id={null} editable puedeControlado={tienePermiso(u.rol, 'catalogo.etiquetas')} />
+        <FormularioProducto id={null} editable />
       </Seccion>
     </>
   );

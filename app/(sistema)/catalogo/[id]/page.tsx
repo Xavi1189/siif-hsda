@@ -38,6 +38,7 @@ export default async function Producto({ params }: { params: Promise<{ id: strin
           {p.estatus !== 'activo' && <Insignia>{p.estatus === 'inactivo' ? 'Inactivo' : 'Descontinuado'}</Insignia>}
           {p.controlado && <Controlado grupo={p.grupo_controlado as string | null} />}
           {etiquetasActivas.map((e) => <EtiquetaProducto key={e.id} e={e} />)}
+          {p.cuadro_basico && <Insignia tono="info">Cuadro básico</Insignia>}
           {p.origen === 'siho' && <Insignia tono="info">Importado del SIHO</Insignia>}
         </span>} />
 
@@ -50,8 +51,8 @@ export default async function Producto({ params }: { params: Promise<{ id: strin
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
         <div className="flex min-w-0 flex-col gap-5">
           <Seccion titulo="Datos del producto" descripcion={editable ? 'Cada cambio queda registrado con usuario, fecha y valores anterior y nuevo.' : 'Solo lectura para tu rol.'}>
-            <FormularioProducto id={p.id} editable={editable} puedeControlado={tienePermiso(u.rol, 'catalogo.etiquetas')}
-              inicial={Object.fromEntries(Object.entries(p).map(([k, v]) => [k, v == null ? (k === 'grupo_controlado' ? null : '') : typeof v === 'boolean' ? v : String(v)]))} />
+            <FormularioProducto id={p.id} editable={editable}
+              inicial={Object.fromEntries(Object.entries(p).map(([k, v]) => [k, v == null ? '' : typeof v === 'boolean' ? v : String(v)]))} />
           </Seccion>
           <Seccion titulo="Códigos de barras" descripcion="Un código identifica una presentación. Una caja (EAN/GTIN) normalmente NO trae lote ni caducidad; esos datos se capturan al recibir.">
             <Codigos id={p.id} codigos={d.codigos} presentaciones={d.presentaciones} puedeVincular={puedeVincular} puedeVerificar={tienePermiso(u.rol, 'codigos.verificar')} />
@@ -67,7 +68,7 @@ export default async function Producto({ params }: { params: Promise<{ id: strin
             <Presentaciones id={p.id} unidad={p.unidad_minima} presentaciones={d.presentaciones} editable={editable} />
           </Seccion>
           <Seccion titulo="Etiquetas de seguridad" descripcion="Las asigna el Responsable Sanitario. Se muestran con ícono y texto al seleccionar o surtir el producto.">
-            <Etiquetas id={p.id} etiquetas={d.etiquetas} editable={tienePermiso(u.rol, 'catalogo.etiquetas')} />
+            <Etiquetas id={p.id} etiquetas={d.etiquetas} controlado={!!p.controlado} grupo={(p.grupo_controlado as string | null) ?? null} editable={tienePermiso(u.rol, 'catalogo.etiquetas')} />
           </Seccion>
           <Seccion titulo="Lotes y existencias">
             <div className="flex items-start gap-3 text-[14px] text-tenue">

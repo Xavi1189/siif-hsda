@@ -34,7 +34,8 @@ Documentos relacionados: [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md) (arquite
 | Configuración: nombre, siglas, logotipo, ubicaciones por área, parámetros del lector | ✅ |
 | Catálogo: búsqueda (clave, nombre, código, localización SIHO), filtros, paginación, ficha completa, historial | ✅ |
 | Presentaciones con factor de conversión explícito a unidad mínima | ✅ |
-| Etiquetas LASA, alto riesgo, cadena fría y electrolito concentrado (texto + ícono, no solo color) | ✅ |
+| Etiquetas de seguridad: controlado (con grupo), LASA, alto riesgo (incluye electrolitos concentrados), cadena fría y antibiótico (texto + ícono, no solo color) | ✅ |
+| Marca de cuadro básico de medicamentos | ✅ |
 | Controlados (marca y grupo I/II/III, con permiso especial) | ✅ |
 | Parámetros por área: mínimo, máximo, punto de reorden, stock de seguridad, tiempo de entrega | ✅ |
 | Importación del catálogo del SIHO (corte 15/10/2026: 826 productos, 1,090 registros producto-área) | ✅ |
@@ -115,7 +116,7 @@ Nunca se guardan credenciales en el código ni en el repositorio (`.env*` está 
 ## 7. Pruebas
 
 ```bash
-npm test          # 62 pruebas sobre PostgreSQL real (PGlite), sin configurar nada
+npm test          # 63 pruebas sobre PostgreSQL real (PGlite), sin configurar nada
 npm run typecheck
 npm run build
 ```

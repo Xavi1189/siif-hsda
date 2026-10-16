@@ -1,9 +1,9 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { BadgeCheck, Link2, Plus, Unlink } from 'lucide-react';
+import { BadgeCheck, Link2, Plus, ShieldAlert, Unlink } from 'lucide-react';
 import {
-  agregarPresentacionAccion, desactivarCodigoAccion, desactivarPresentacionAccion, etiquetaAccion, parametrosAccion,
+  agregarPresentacionAccion, controladoAccion, desactivarCodigoAccion, desactivarPresentacionAccion, etiquetaAccion, parametrosAccion,
   verificarCodigoAccion, vincular,
 } from '@/app/(sistema)/acciones';
 import type { ProductoDetalle } from '@/lib/catalogo';
@@ -118,7 +118,9 @@ export function Codigos({ id, codigos, presentaciones, puedeVincular, puedeVerif
 }
 
 // --------------------------------------------------------------------------
-export function Etiquetas({ id, etiquetas, editable }: { id: number; etiquetas: P['etiquetas']; editable: boolean }) {
+export function Etiquetas({ id, etiquetas, controlado, grupo, editable }: {
+  id: number; etiquetas: P['etiquetas']; controlado: boolean; grupo: string | null; editable: boolean;
+}) {
   const router = useRouter();
   const { pendiente, estado, setEstado, ejecutar } = useAccion();
   const [marcadas, setMarcadas] = useState<Record<number, boolean>>(() => Object.fromEntries(etiquetas.map((e) => [e.id, e.asignada])));
@@ -131,10 +133,42 @@ export function Etiquetas({ id, etiquetas, editable }: { id: number; etiquetas: 
       return r;
     }, () => router.refresh());
   };
+  // Controlado: se marca aquí junto con las demás etiquetas; exige grupo I, II o III
+  const [ctrl, setCtrl] = useState({ marcado: controlado, grupo: grupo ?? '' });
+  const guardarCtrl = (marcado: boolean, g: string) => {
+    const previo = ctrl;
+    setCtrl({ marcado, grupo: g });
+    setEstado(null);
+    if (marcado && !g) return; // falta elegir grupo; se guarda al elegirlo
+    ejecutar(async () => {
+      const r = await controladoAccion(id, marcado, marcado ? g : null);
+      if (!r.ok) setCtrl(previo);
+      return r;
+    }, () => router.refresh());
+  };
   return (
     <div className="flex flex-col gap-3">
       {estado && <Aviso tono={estado.tono}>{estado.texto}</Aviso>}
       <ul className="grid gap-2 sm:grid-cols-2">
+        <li className="sm:col-span-2">
+          <div className={`flex flex-wrap items-start gap-x-4 gap-y-2 rounded-md border px-3 py-2.5 ${ctrl.marcado ? 'border-peligro/40 bg-peligro-claro/60' : 'border-linea'}`}>
+            <label className={`flex min-w-0 flex-1 items-start gap-2.5 ${editable ? 'cursor-pointer' : ''}`}>
+              <input type="checkbox" className="mt-1 h-4 w-4 accent-[#B42318]" checked={ctrl.marcado} disabled={!editable || pendiente}
+                onChange={(ev) => guardarCtrl(ev.target.checked, ev.target.checked ? ctrl.grupo : '')} />
+              <span className="min-w-0">
+                <span className="inline-flex items-center gap-1 rounded border border-peligro/30 bg-peligro-claro px-1.5 py-px text-[12px] font-semibold text-peligro"><ShieldAlert size={12} aria-hidden />Medicamento controlado</span>
+                <span className="mt-1 block text-[12px] text-tenue">{ctrl.marcado && !ctrl.grupo ? 'Elige el grupo para guardar la marca.' : 'Activa los controles especiales de psicotrópicos y estupefacientes.'}</span>
+              </span>
+            </label>
+            <div className="w-36">
+              <label htmlFor="ctrl-grupo" className="sr-only">Grupo del controlado</label>
+              <select id="ctrl-grupo" className="campo" value={ctrl.grupo} disabled={!editable || pendiente || !ctrl.marcado}
+                onChange={(ev) => guardarCtrl(true, ev.target.value)}>
+                <option value="">Grupo…</option><option value="I">Grupo I</option><option value="II">Grupo II</option><option value="III">Grupo III</option>
+              </select>
+            </div>
+          </div>
+        </li>
         {etiquetas.map((e) => (
           <li key={e.id}>
             <label className={`flex items-start gap-2.5 rounded-md border px-3 py-2.5 ${marcadas[e.id] ? 'border-clinico/40 bg-clinico-claro/50' : 'border-linea'} ${editable ? 'cursor-pointer' : ''}`}>
