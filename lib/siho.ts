@@ -49,12 +49,14 @@ export async function importarCatalogoSiho(tx: Tx, a: Actor, corte: CorteSiho): 
   // Unidad mínima (factor 1) y presentación de empaque (factor = contenido)
   const pres = await tx.query<{ n: string }>(
     `WITH x AS (
-       SELECT p.id, p.unidad_minima AS nombre, 1 AS factor FROM productos p WHERE p.clave = ANY($1::text[])
+       SELECT p.id, p.unidad_minima AS nombre, 1 AS factor, true AS es_unidad FROM productos p WHERE p.clave = ANY($1::text[])
        UNION ALL
-       SELECT p.id, e, f FROM unnest($1::text[], $2::text[], $3::int[]) AS t(c, e, f) JOIN productos p ON p.clave = t.c
+       SELECT p.id, e, f, false FROM unnest($1::text[], $2::text[], $3::int[]) AS t(c, e, f) JOIN productos p ON p.clave = t.c
         WHERE f > 1 AND e <> ''
      ), ins AS (
-       INSERT INTO presentaciones (producto_id, nombre, factor) SELECT id, nombre, factor FROM x
+       INSERT INTO presentaciones (producto_id, nombre, factor, es_unidad)
+       SELECT id, nombre, factor, es_unidad FROM x
+        WHERE NOT (es_unidad AND EXISTS (SELECT 1 FROM presentaciones q WHERE q.producto_id = x.id AND q.es_unidad))
        ON CONFLICT (producto_id, nombre, factor) DO NOTHING RETURNING 1
      ) SELECT count(*) n FROM ins`,
     [filas.map((f) => f.clave), filas.map((f) => f.empaque), filas.map((f) => f.contenido)]);

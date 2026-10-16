@@ -160,7 +160,7 @@ function Encontrado({ r }: { r: ResultadoLectura }) {
       <div className="mt-4 rounded-md bg-clinico-claro px-4 py-3">
         <p className="rotulo">Este código identifica</p>
         <p className="mt-0.5 font-mono text-[20px] font-medium">
-          1 {e.presentacion.nombre.toLowerCase()}{e.presentacion.factor > 1 && <> = {e.presentacion.factor.toLocaleString('es-MX')} {e.producto.unidad_minima.toLowerCase()}</>}
+          1 {e.presentacion.nombre.toLowerCase()}{!e.presentacion.es_unidad && <> = {e.presentacion.factor.toLocaleString('es-MX')} {e.producto.unidad_minima.toLowerCase()}</>}
         </p>
       </div>
       {e.etiquetas.filter((x) => x.advertencia).map((x) => <div key={x.codigo} className="mt-3"><Aviso tono={x.tono === 'peligro' ? 'peligro' : 'alerta'} titulo={x.nombre}>{x.advertencia}</Aviso></div>)}
@@ -209,7 +209,7 @@ function Desconocido({ r, puedeVincular, alVincular }: { r: ResultadoLectura; pu
                 <ul className="max-h-72 divide-y divide-linea overflow-y-auto rounded-md border border-linea">
                   {lista.map((p) => (
                     <li key={p.id}><button type="button" className="flex w-full gap-3 px-3 py-2 text-left hover:bg-clinico-claro focus:bg-clinico-claro"
-                      onClick={() => { setElegido(p); const def = p.presentaciones.find((x) => x.factor > 1) ?? p.presentaciones[0]; setPres(String(def?.id ?? '')); }}>
+                      onClick={() => { setElegido(p); const def = p.presentaciones.find((x) => !x.es_unidad) ?? p.presentaciones[0]; setPres(String(def?.id ?? '')); }}>
                       <span className="font-mono text-[13px] text-tenue">{p.clave}</span><span className="text-[14px]">{p.descripcion}</span>
                     </button></li>
                   ))}
@@ -229,7 +229,7 @@ function Desconocido({ r, puedeVincular, alVincular }: { r: ResultadoLectura; pu
               <div>
                 <label htmlFor="pres-vincular" className="etiqueta-campo">El código está impreso en</label>
                 <select id="pres-vincular" className="campo" value={pres} onChange={(e) => setPres(e.target.value)}>
-                  {presentaciones.map((x) => <option key={x.id} value={x.id}>{x.factor > 1 ? `${x.nombre.toLowerCase()} con ${x.factor} ${elegido.unidad_minima.toLowerCase()}` : `${x.nombre.toLowerCase()} individual`}</option>)}
+                  {presentaciones.map((x) => <option key={x.id} value={x.id}>{!x.es_unidad ? `${x.nombre.toLowerCase()} con ${x.factor} ${elegido.unidad_minima.toLowerCase()}` : `${x.nombre.toLowerCase()} individual`}</option>)}
                 </select>
                 <p className="mt-1 text-[12px] text-tenue">Si la caja trae otro número de piezas, agrégalo primero como presentación en la ficha del producto.</p>
               </div>

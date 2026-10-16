@@ -27,9 +27,9 @@ export function Presentaciones({ id, unidad, presentaciones, editable }: { id: n
         <tbody>
           {presentaciones.map((p) => (
             <tr key={p.id} className={p.activa ? '' : 'opacity-50'}>
-              <td>{p.nombre}{p.factor === 1 && <span className="ml-2"><Insignia tono="info">Unidad mínima</Insignia></span>}{!p.activa && <span className="ml-2 text-[12px] text-tenue">inactiva</span>}</td>
+              <td>{p.nombre}{p.es_unidad && <span className="ml-2"><Insignia tono="info">Unidad mínima</Insignia></span>}{!p.activa && <span className="ml-2 text-[12px] text-tenue">inactiva</span>}</td>
               <td className="num font-mono">{p.factor.toLocaleString('es-MX')} {unidad.toLowerCase()}</td>
-              <td className="text-right">{editable && p.factor > 1 && p.activa && (
+              <td className="text-right">{editable && !p.es_unidad && p.activa && (
                 <button className="btn-fantasma btn-chico" disabled={pendiente} onClick={() => ejecutar(() => desactivarPresentacionAccion(id, p.id), () => router.refresh())}>Desactivar</button>)}</td>
             </tr>
           ))}
@@ -38,7 +38,7 @@ export function Presentaciones({ id, unidad, presentaciones, editable }: { id: n
       {editable && (
         <form className="flex flex-wrap items-end gap-2" onSubmit={(e) => { e.preventDefault(); ejecutar(() => agregarPresentacionAccion(id, nombre, Number(factor)), () => { setFactor(''); router.refresh(); }); }}>
           <div className="w-36"><label htmlFor="pres-n" className="etiqueta-campo">Presentación</label><input id="pres-n" className="campo" value={nombre} onChange={(e) => setNombre(e.target.value.toUpperCase())} /></div>
-          <div className="w-36"><label htmlFor="pres-f" className="etiqueta-campo">Contiene ({unidad.toLowerCase()})</label><input id="pres-f" className="campo" type="number" min={2} step={1} inputMode="numeric" value={factor} onChange={(e) => setFactor(e.target.value)} required /></div>
+          <div className="w-36"><label htmlFor="pres-f" className="etiqueta-campo">Contiene ({unidad.toLowerCase()})</label><input id="pres-f" className="campo" type="number" min={1} step={1} inputMode="numeric" value={factor} onChange={(e) => setFactor(e.target.value)} required /></div>
           <button className="btn-secundario" disabled={pendiente}><Plus size={16} aria-hidden />Agregar</button>
         </form>
       )}
@@ -55,7 +55,7 @@ export function Codigos({ id, codigos, presentaciones, puedeVincular, puedeVerif
   const { pendiente, estado, setEstado, ejecutar } = useAccion();
   const activas = presentaciones.filter((p) => p.activa);
   const [codigo, setCodigo] = useState('');
-  const [pres, setPres] = useState(String(activas.find((p) => p.factor > 1)?.id ?? activas[0]?.id ?? ''));
+  const [pres, setPres] = useState(String(activas.find((p) => !p.es_unidad)?.id ?? activas[0]?.id ?? ''));
   const [motivo, setMotivo] = useState<{ id: number; texto: string } | null>(null);
   return (
     <div className="flex flex-col gap-3">
@@ -68,7 +68,7 @@ export function Codigos({ id, codigos, presentaciones, puedeVincular, puedeVerif
               {codigos.map((c) => (
                 <tr key={c.id}>
                   <td className="font-mono text-[13px]">{c.codigo}<span className="block font-sans text-[11px] text-tenue">{c.tipo === 'GTIN' ? 'GTIN / EAN' : 'Interno'}</span></td>
-                  <td className="text-[13px]">{c.presentacion.toLowerCase()}{c.factor > 1 && ` c/${c.factor}`}</td>
+                  <td className="text-[13px]">{c.presentacion.toLowerCase()}{!c.es_unidad && ` c/${c.factor}`}</td>
                   <td>{c.verificado ? <Insignia tono="exito" icono={<BadgeCheck size={12} aria-hidden />}>Verificado</Insignia> : <Insignia tono="alerta">Por verificar</Insignia>}</td>
                   <td className="text-[12px] text-tenue">{c.creado_por ?? '—'}<br />{fechaHora(c.creado)}</td>
                   <td className="whitespace-nowrap text-right">
@@ -106,7 +106,7 @@ export function Codigos({ id, codigos, presentaciones, puedeVincular, puedeVerif
           <div className="w-44">
             <label htmlFor="cod-pres" className="etiqueta-campo">Identifica a</label>
             <select id="cod-pres" className="campo" value={pres} onChange={(e) => setPres(e.target.value)}>
-              {activas.map((p) => <option key={p.id} value={p.id}>{p.nombre.toLowerCase()}{p.factor > 1 ? ` c/${p.factor}` : ' (unidad)'}</option>)}
+              {activas.map((p) => <option key={p.id} value={p.id}>{p.nombre.toLowerCase()}{!p.es_unidad ? ` c/${p.factor}` : ' (unidad)'}</option>)}
             </select>
           </div>
           <button className="btn-secundario" disabled={pendiente}><Link2 size={16} aria-hidden />Vincular</button>

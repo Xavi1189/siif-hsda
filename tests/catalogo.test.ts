@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import type { Db } from '@/lib/db-core';
 import { baseDePrueba, crearUsuarioPrueba } from './helpers';
 import {
-  agregarPresentacion, buscarPorCodigo, buscarProductos, cambiarControlado, cambiarEtiqueta, desactivarCodigo, guardarParametrosArea,
+  agregarPresentacion, buscarPorCodigo, buscarProductos, desactivarPresentacion, cambiarControlado, cambiarEtiqueta, desactivarCodigo, guardarParametrosArea,
   guardarProducto, obtenerProducto, verificarCodigo, vincularCodigo, type Actor,
 } from '@/lib/catalogo';
 import { asignarGruposTerapeuticos, importarCatalogoSiho, type CorteSiho, type GruposPorClave } from '@/lib/siho';
@@ -130,8 +130,16 @@ describe('productos', () => {
     const id = (await db.query<{ id: number }>(`SELECT id FROM productos WHERE clave = 'X100'`)).rows[0].id;
     await expect(agregarPresentacion(db, encargado, id, 'caja', 2.5)).rejects.toThrow(/entero/);
     await expect(agregarPresentacion(db, encargado, id, 'caja', 0)).rejects.toThrow(/entero/);
-    await expect(agregarPresentacion(db, encargado, id, 'caja', 1)).rejects.toThrow(/más de una/);
+    await expect(agregarPresentacion(db, encargado, id, 'ampula', 1)).rejects.toThrow(/unidad mínima/);
     await agregarPresentacion(db, encargado, id, 'caja', 3);
+    // Caja con una sola ampolleta: factor 1 permitido con nombre de empaque
+    const c1 = await agregarPresentacion(db, encargado, id, 'caja individual', 1);
+    const d = (await obtenerProducto(db, id))!.presentaciones;
+    expect(d.filter((p) => p.es_unidad).map((p) => p.nombre)).toEqual(['AMPULA']);
+    expect(d.find((p) => p.id === c1)).toMatchObject({ nombre: 'CAJA INDIVIDUAL', factor: 1, es_unidad: false });
+    await desactivarPresentacion(db, encargado, c1);
+    const unidad = d.find((p) => p.es_unidad)!.id;
+    await expect(desactivarPresentacion(db, encargado, unidad)).rejects.toThrow(/unidad mínima no se puede/);
     await expect(agregarPresentacion(db, encargado, id, 'CAJA', 3)).rejects.toThrow(/ya existe/);
   });
   it('valida parámetros por área (máximo ≥ mínimo, enteros, ubicación del área)', async () => {

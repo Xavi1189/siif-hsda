@@ -64,8 +64,8 @@ export async function buscarProductos(tx: Tx, f: FiltroCatalogo): Promise<{ fila
   p.push(porPagina, (pagina - 1) * porPagina);
   const filas = (await tx.query<FilaCatalogo>(`
     SELECT pr.id, pr.clave, pr.descripcion, pr.tipo, pr.unidad_minima, pr.estatus, pr.costo_unitario::text, pr.controlado, pr.grupo_controlado, pr.cuadro_basico, pr.grupo_terapeutico,
-      (SELECT ps.nombre FROM presentaciones ps WHERE ps.producto_id = pr.id AND ps.activa AND ps.factor > 1 ORDER BY ps.factor LIMIT 1) AS presentacion,
-      (SELECT ps.factor FROM presentaciones ps WHERE ps.producto_id = pr.id AND ps.activa AND ps.factor > 1 ORDER BY ps.factor LIMIT 1) AS factor,
+      (SELECT ps.nombre FROM presentaciones ps WHERE ps.producto_id = pr.id AND ps.activa AND NOT ps.es_unidad ORDER BY ps.factor LIMIT 1) AS presentacion,
+      (SELECT ps.factor FROM presentaciones ps WHERE ps.producto_id = pr.id AND ps.activa AND NOT ps.es_unidad ORDER BY ps.factor LIMIT 1) AS factor,
       (SELECT count(*)::int FROM codigos_barras cb WHERE cb.producto_id = pr.id AND cb.activo) AS codigos,
       (SELECT count(*)::int FROM codigos_barras cb WHERE cb.producto_id = pr.id AND cb.activo AND NOT cb.verificado) AS codigos_sin_verificar,
       coalesce((SELECT json_agg(json_build_object('codigo', e.codigo, 'nombre', e.nombre, 'icono', e.icono, 'tono', e.tono) ORDER BY e.id)
@@ -81,8 +81,8 @@ export async function buscarProductos(tx: Tx, f: FiltroCatalogo): Promise<{ fila
 
 export interface ProductoDetalle {
   producto: Record<string, unknown> & { id: number; clave: string; descripcion: string; unidad_minima: string };
-  presentaciones: { id: number; nombre: string; factor: number; activa: boolean }[];
-  codigos: { id: number; codigo: string; tipo: string; verificado: boolean; presentacion: string; factor: number; creado: string; creado_por: string | null; verificado_por: string | null }[];
+  presentaciones: { id: number; nombre: string; factor: number; activa: boolean; es_unidad: boolean }[];
+  codigos: { id: number; codigo: string; tipo: string; verificado: boolean; presentacion: string; factor: number; es_unidad: boolean; creado: string; creado_por: string | null; verificado_por: string | null }[];
   etiquetas: { id: number; codigo: string; nombre: string; icono: string; tono: string; advertencia: string | null; asignada: boolean }[];
   parametros: { area_id: number; area: string; area_nombre: string; ubicacion_predeterminada: number | null; ubicacion_siho: string | null; minimo: number | null; maximo: number | null; punto_reorden: number | null; stock_seguridad: number | null; tiempo_entrega_dias: number | null; maneja_en_area: boolean }[];
   ubicaciones: { id: number; area_id: number; codigo: string; nombre: string }[];
@@ -97,9 +97,9 @@ export async function obtenerProducto(tx: Tx, id: number): Promise<ProductoDetal
        FROM productos WHERE id = $1`, [id])).rows[0];
   if (!pr) return null;
   const [presentaciones, codigos, etiquetas, parametros, ubicaciones, historial] = await Promise.all([
-    tx.query<ProductoDetalle['presentaciones'][0]>('SELECT id, nombre, factor, activa FROM presentaciones WHERE producto_id = $1 ORDER BY factor, nombre', [id]),
+    tx.query<ProductoDetalle['presentaciones'][0]>('SELECT id, nombre, factor, activa, es_unidad FROM presentaciones WHERE producto_id = $1 ORDER BY es_unidad DESC, factor, nombre', [id]),
     tx.query<ProductoDetalle['codigos'][0]>(
-      `SELECT cb.id, cb.codigo, cb.tipo, cb.verificado, ps.nombre AS presentacion, ps.factor, cb.creado,
+      `SELECT cb.id, cb.codigo, cb.tipo, cb.verificado, ps.nombre AS presentacion, ps.factor, ps.es_unidad, cb.creado,
               uc.nombre AS creado_por, uv.nombre AS verificado_por
          FROM codigos_barras cb JOIN presentaciones ps ON ps.id = cb.presentacion_id
          LEFT JOIN usuarios uc ON uc.id = cb.creado_por LEFT JOIN usuarios uv ON uv.id = cb.verificado_por
@@ -163,7 +163,7 @@ export async function guardarProducto(tx: Tx, a: Actor, entrada: unknown, id?: n
       `INSERT INTO productos (${CAMPOS.join(', ')}, actualizado_por)
        VALUES (${CAMPOS.map((_, i) => `$${i + 1}`).join(', ')}, $${CAMPOS.length + 1}) RETURNING id`, [...valores, a.id]);
     const nuevo = r.rows[0].id;
-    await tx.query(`INSERT INTO presentaciones (producto_id, nombre, factor) VALUES ($1, $2, 1)`, [nuevo, d.unidad_minima]);
+    await tx.query(`INSERT INTO presentaciones (producto_id, nombre, factor, es_unidad) VALUES ($1, $2, 1, true)`, [nuevo, d.unidad_minima]);
     await auditar(tx, { usuarioId: a.id, accion: 'producto.crear', entidad: 'producto', entidadId: nuevo, detalle: d, ip: a.ip });
     return nuevo;
   }
@@ -185,7 +185,7 @@ export async function guardarProducto(tx: Tx, a: Actor, entrada: unknown, id?: n
     `UPDATE productos SET ${CAMPOS.map((c, i) => `${c} = $${i + 1}`).join(', ')}, actualizado = now(), actualizado_por = $${CAMPOS.length + 1}
       WHERE id = $${CAMPOS.length + 2}`, [...valores, a.id, id]);
   if (cambios.unidad_minima) {
-    await tx.query(`UPDATE presentaciones SET nombre = $2 WHERE producto_id = $1 AND factor = 1 AND nombre = $3`, [id, d.unidad_minima, antes.unidad_minima]);
+    await tx.query(`UPDATE presentaciones SET nombre = $2 WHERE producto_id = $1 AND es_unidad`, [id, d.unidad_minima, antes.unidad_minima]);
   }
   await auditar(tx, { usuarioId: a.id, accion: 'producto.editar', entidad: 'producto', entidadId: id, detalle: { cambios }, ip: a.ip });
   return id;
@@ -213,7 +213,9 @@ export async function agregarPresentacion(tx: Tx, a: Actor, productoId: number, 
   const f = validarFactor(factor);
   const n = nombre.trim().toUpperCase();
   if (n.length < 2 || n.length > 40) throw new ErrorNegocio('Escribe el nombre de la presentación (caja, frasco, blíster…).');
-  if (f === 1) throw new ErrorNegocio('La unidad mínima ya existe con factor 1; una presentación nueva debe contener más de una unidad.');
+  // Se permite factor 1 (p. ej. CAJA con 1 ampolleta) siempre que no repita el nombre de la unidad mínima
+  const unidad = (await tx.query<{ nombre: string }>('SELECT nombre FROM presentaciones WHERE producto_id = $1 AND es_unidad', [productoId])).rows[0];
+  if (f === 1 && unidad && unidad.nombre === n) throw new ErrorNegocio(`${n} ya es la unidad mínima. Usa el nombre del empaque (caja, frasco…).`);
   const ex = await tx.query<{ id: number; activa: boolean }>('SELECT id, activa FROM presentaciones WHERE producto_id = $1 AND nombre = $2 AND factor = $3', [productoId, n, f]);
   if (ex.rows[0]?.activa) throw new ErrorNegocio('Esa presentación ya existe.');
   let id: number;
@@ -225,9 +227,9 @@ export async function agregarPresentacion(tx: Tx, a: Actor, productoId: number, 
 
 export async function desactivarPresentacion(tx: Tx, a: Actor, presentacionId: number) {
   exigir(a, 'catalogo.editar');
-  const p = (await tx.query<{ producto_id: number; factor: number; nombre: string }>('SELECT producto_id, factor, nombre FROM presentaciones WHERE id = $1', [presentacionId])).rows[0];
+  const p = (await tx.query<{ producto_id: number; factor: number; nombre: string; es_unidad: boolean }>('SELECT producto_id, factor, nombre, es_unidad FROM presentaciones WHERE id = $1', [presentacionId])).rows[0];
   if (!p) throw new ErrorNegocio('La presentación no existe.');
-  if (p.factor === 1) throw new ErrorNegocio('La unidad mínima no se puede desactivar.');
+  if (p.es_unidad) throw new ErrorNegocio('La unidad mínima no se puede desactivar.');
   const cods = await tx.query('SELECT 1 FROM codigos_barras WHERE presentacion_id = $1 AND activo', [presentacionId]);
   if (cods.rows.length) throw new ErrorNegocio('Primero desactiva los códigos de barras ligados a esta presentación.');
   await tx.query('UPDATE presentaciones SET activa = false WHERE id = $1', [presentacionId]);
@@ -285,7 +287,7 @@ export interface ResultadoLectura {
     codigoId?: number;
     verificado: boolean;
     producto: { id: number; clave: string; descripcion: string; unidad_minima: string; estatus: string; controlado: boolean };
-    presentacion: { id: number; nombre: string; factor: number };
+    presentacion: { id: number; nombre: string; factor: number; es_unidad: boolean };
     etiquetas: { codigo: string; nombre: string; icono: string; tono: string; advertencia: string | null }[];
   };
 }
@@ -297,7 +299,7 @@ export async function buscarPorCodigo(tx: Tx, entrada: string): Promise<Resultad
        FROM producto_etiquetas pe JOIN etiquetas e ON e.id = pe.etiqueta_id WHERE pe.producto_id = p.id AND e.activa), '[]')`;
   const r = await tx.query<NonNullable<ResultadoLectura['encontrado']> & { codigo_id: number }>(
     `SELECT cb.id AS codigo_id, cb.verificado, ${prodCols} AS producto,
-            json_build_object('id', ps.id, 'nombre', ps.nombre, 'factor', ps.factor) AS presentacion, ${etqCols} AS etiquetas
+            json_build_object('id', ps.id, 'nombre', ps.nombre, 'factor', ps.factor, 'es_unidad', ps.es_unidad) AS presentacion, ${etqCols} AS etiquetas
        FROM codigos_barras cb JOIN productos p ON p.id = cb.producto_id JOIN presentaciones ps ON ps.id = cb.presentacion_id
       WHERE cb.codigo = $1 AND cb.activo`, [lectura.normalizado]);
   if (r.rows[0]) {
@@ -306,8 +308,8 @@ export async function buscarPorCodigo(tx: Tx, entrada: string): Promise<Resultad
   }
   // ¿Escribieron o escanearon la clave interna del SIHO?
   const c = await tx.query<Pick<NonNullable<ResultadoLectura['encontrado']>, 'producto' | 'presentacion' | 'etiquetas'>>(
-    `SELECT ${prodCols} AS producto, json_build_object('id', ps.id, 'nombre', ps.nombre, 'factor', ps.factor) AS presentacion, ${etqCols} AS etiquetas
-       FROM productos p JOIN presentaciones ps ON ps.producto_id = p.id AND ps.factor = 1
+    `SELECT ${prodCols} AS producto, json_build_object('id', ps.id, 'nombre', ps.nombre, 'factor', ps.factor, 'es_unidad', ps.es_unidad) AS presentacion, ${etqCols} AS etiquetas
+       FROM productos p JOIN presentaciones ps ON ps.producto_id = p.id AND ps.es_unidad
       WHERE p.clave = $1 LIMIT 1`, [entrada.trim()]);
   if (c.rows[0]) return { lectura, encontrado: { ...c.rows[0], via: 'clave', verificado: true } };
   return { lectura, encontrado: null };
@@ -357,9 +359,9 @@ export async function sugerirProductos(tx: Tx, q: string, limite = 15) {
   if (!terminos.length) return [];
   const p = terminos.map((t) => '%' + t.replace(/[%_\\]/g, '\\$&') + '%');
   const where = p.map((_, i) => `busqueda LIKE $${i + 1}`).join(' AND ');
-  return (await tx.query<{ id: number; clave: string; descripcion: string; unidad_minima: string; presentaciones: { id: number; nombre: string; factor: number }[] }>(
+  return (await tx.query<{ id: number; clave: string; descripcion: string; unidad_minima: string; presentaciones: { id: number; nombre: string; factor: number; es_unidad: boolean }[] }>(
     `SELECT pr.id, pr.clave, pr.descripcion, pr.unidad_minima,
-            (SELECT json_agg(json_build_object('id', ps.id, 'nombre', ps.nombre, 'factor', ps.factor) ORDER BY ps.factor)
+            (SELECT json_agg(json_build_object('id', ps.id, 'nombre', ps.nombre, 'factor', ps.factor, 'es_unidad', ps.es_unidad) ORDER BY ps.es_unidad DESC, ps.factor)
                FROM presentaciones ps WHERE ps.producto_id = pr.id AND ps.activa) AS presentaciones
        FROM productos pr WHERE ${where} AND pr.estatus <> 'descontinuado'
       ORDER BY (pr.clave = $${p.length + 1}) DESC, pr.descripcion LIMIT ${Math.min(limite, 30)}`, [...p, q.trim()])).rows;
