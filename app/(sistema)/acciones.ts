@@ -1,6 +1,4 @@
 'use server';
-import fs from 'node:fs';
-import path from 'node:path';
 import { revalidatePath } from 'next/cache';
 import { accion, type Resultado } from '@/lib/servidor';
 import { db } from '@/lib/db';
@@ -71,9 +69,11 @@ export async function desactivarCodigoAccion(productoId: number, codigoId: numbe
 }
 
 export async function importarSihoAccion(): Promise<Resultado<ResumenImportacion>> {
-  const archivo = path.join(process.cwd(), 'data', 'siho-catalogo-2026-10-15.json');
-  const corte = JSON.parse(fs.readFileSync(archivo, 'utf8')) as CorteSiho;
-  const r = await accion('catalogo.importar', (tx, a) => importarCatalogoSiho(tx, a, corte));
+  // El corte se importa dinámicamente para que quede empaquetado en la función de Vercel
+  const r = await accion('catalogo.importar', async (tx, a) => {
+    const corte = (await import('@/data/siho-catalogo-2026-10-15.json')).default as unknown as CorteSiho;
+    return importarCatalogoSiho(tx, a, corte);
+  });
   revalidatePath('/', 'layout');
   return r;
 }
