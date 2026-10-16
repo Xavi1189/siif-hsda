@@ -25,7 +25,7 @@ export default async function Configuracion({ searchParams }: { searchParams: Pr
       {sp.bienvenida && <div className="mb-5"><Aviso tono="exito" titulo="Administrador creado">Empieza importando el catálogo del SIHO y después da de alta al equipo en Usuarios. Recuerda borrar SIIF_CLAVE_INSTALACION de Vercel.</Aviso></div>}
       <div className="grid gap-5 xl:grid-cols-2">
         <Seccion titulo="Institución y lector"><FormInstitucion inicial={c} /></Seccion>
-        <Seccion titulo="Logotipo" descripcion="Aparece en el menú, en la pantalla de acceso y en los reportes."><FormLogo tieneLogo={c.tiene_logo} version={c.actualizado} /></Seccion>
+        <Seccion titulo="Logotipo" descripcion="El menú y la pantalla de acceso usan el logotipo oficial del Manual de Identidad. Este archivo se usará en los encabezados de reportes (Fase 5)."><FormLogo tieneLogo={c.tiene_logo} version={c.actualizado} /></Seccion>
         <div id="catalogo" className="xl:col-span-2"><Seccion titulo="Catálogo inicial del SIHO"><ImportarSiho productos={productos.rows[0].n} puede={tienePermiso(u.rol, 'catalogo.importar')} /></Seccion></div>
         <Seccion titulo="Áreas y ubicaciones" className="xl:col-span-2" descripcion="Anaqueles, refrigeradores, gavetas y almacenes de cada farmacia. Cuarentena no permite surtir. Las ubicaciones no se borran: se desactivan.">
           <Ubicaciones areas={areas.rows} ubicaciones={ubicaciones.rows} />

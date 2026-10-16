@@ -27,10 +27,9 @@ export function Shell({ nav, institucion, siglas, tieneLogo, usuario, rol, fecha
   const lateral = (
     <nav aria-label="Módulos" className="flex h-full flex-col">
       <Link href="/" className="flex items-center gap-3 px-5 pb-5 pt-5" onClick={() => setAbierto(false)}>
-        {tieneLogo
-          // eslint-disable-next-line @next/next/no-img-element
-          ? <img src="/api/logo" alt="" className="h-9 w-9 rounded bg-white object-contain p-0.5" />
-          : <span className="grid h-9 w-9 place-items-center rounded bg-white/10 font-titulo text-[15px] font-bold">{siglas.slice(0, 2)}</span>}
+        {/* Isotipo blanco: uso alternativo del manual para espacios reducidos y contextos digitales */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/isotipo-blanco.png" alt="Hospital San Diego de Alcalá" width={44} height={44} className="h-11 w-11 shrink-0" />
         <span className="min-w-0">
           <span className="block font-titulo text-[19px] font-bold leading-none">{siglas}</span>
           <span className="block truncate text-[12px] text-marino-300">Inventario farmacéutico</span>

@@ -1,28 +1,29 @@
 import type { Config } from 'tailwindcss';
 
-// Paleta institucional: marino (estructura), clínico (acción), teal (confirmación), con semánticos sobrios.
+// Paleta del Manual de Identidad HSDA (2025): #33394C, #3C5775, #A5B7CF, #F8F4EF. Teal y semánticos solo para estados.
 export default {
   content: ['./app/**/*.{ts,tsx}', './components/**/*.{ts,tsx}'],
   theme: {
     extend: {
       colors: {
-        marino: { DEFAULT: '#0B2545', 700: '#13315C', 600: '#1B3F72', 300: '#8EA4C3', 100: '#DCE5F2' },
-        clinico: { DEFAULT: '#1D5FA8', oscuro: '#164A85', claro: '#E8F0FA' },
+        marino: { DEFAULT: '#33394C', 700: '#3C4560', 600: '#3C5775', 300: '#A5B7CF', 100: '#E4EAF2' },
+        clinico: { DEFAULT: '#3C5775', oscuro: '#33394C', claro: '#EBF0F6' },
         teal: { DEFAULT: '#0E7C74', claro: '#E1F3F1' },
-        fondo: '#F3F5F8',
-        linea: '#D9E0E8',
-        tinta: '#13202E',
-        tenue: '#5A6A7C',
+        fondo: '#F8F4EF',
+        linea: '#DEDBD5',
+        tinta: '#1F2433',
+        tenue: '#5B6474',
         alerta: { DEFAULT: '#9A5800', claro: '#FCF0DA' },
         peligro: { DEFAULT: '#B42318', claro: '#FDE9E7' },
         frio: { DEFAULT: '#0B6A9E', claro: '#E0F1FB' },
       },
       fontFamily: {
         sans: ['"IBM Plex Sans"', 'system-ui', '-apple-system', '"Segoe UI"', 'sans-serif'],
-        titulo: ['"IBM Plex Sans Condensed"', '"IBM Plex Sans"', '"Arial Narrow"', 'sans-serif'],
+        // Avenir (tipografía del manual) es de licencia; Poppins es el sustituto web acordado.
+        titulo: ['Avenir', '"Avenir Next"', 'Poppins', '"IBM Plex Sans"', 'sans-serif'],
         mono: ['"IBM Plex Mono"', 'ui-monospace', 'Menlo', 'Consolas', 'monospace'],
       },
-      boxShadow: { tarjeta: '0 1px 2px rgb(11 37 69 / 0.06), 0 1px 1px rgb(11 37 69 / 0.04)' },
+      boxShadow: { tarjeta: '0 1px 2px rgb(51 57 76 / 0.07), 0 1px 1px rgb(51 57 76 / 0.04)' },
     },
   },
   plugins: [],

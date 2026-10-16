@@ -10,15 +10,11 @@ export function PantallaAcceso({ institucion, sistema, siglas, tieneLogo, titulo
       <aside className="relative hidden overflow-hidden bg-marino text-white lg:flex lg:flex-col lg:justify-between lg:p-12">
         <div aria-hidden className="pointer-events-none absolute inset-0 opacity-[0.07]"
           style={{ backgroundImage: 'repeating-linear-gradient(90deg,#fff 0 1px,transparent 1px 3px,#fff 3px 5px,transparent 5px 9px,#fff 9px 10px,transparent 10px 14px)', backgroundSize: '100% 38%', backgroundRepeat: 'no-repeat', backgroundPosition: 'bottom' }} />
-        <div className="relative flex items-center gap-3">
-          {tieneLogo
-            // eslint-disable-next-line @next/next/no-img-element
-            ? <img src="/api/logo" alt="" className="h-12 w-auto rounded bg-white p-1" />
-            : <span className="grid h-12 w-12 place-items-center rounded bg-white/10 font-titulo text-[20px] font-bold">{siglas.slice(0, 2)}</span>}
-          <div>
-            <p className="font-titulo text-[20px] font-semibold leading-tight">{institucion}</p>
-            <p className="text-[13px] text-marino-300">Farmacia Hospitalaria · Farmacia de Urgencias</p>
-          </div>
+        <div className="relative">
+          {/* Imagotipo blanco del Manual de Identidad HSDA; el archivo conserva el área de respeto (1x) */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-blanco.png" alt={institucion} width={224} height={224} className="-ml-7 -mt-7 h-56 w-56" />
+          <p className="mt-1 text-[13px] text-marino-300">Farmacia Hospitalaria · Farmacia de Urgencias</p>
         </div>
         <div className="relative max-w-md">
           <p className="font-titulo text-[44px] font-bold leading-[1.05]">{siglas}</p>
@@ -32,9 +28,13 @@ export function PantallaAcceso({ institucion, sistema, siglas, tieneLogo, titulo
       </aside>
       <section className="flex items-center justify-center px-4 py-10 sm:px-8">
         <div className="w-full max-w-sm">
-          <div className="mb-6 lg:hidden">
+          <div className="mb-6 flex items-center gap-3 lg:hidden">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/isotipo-azul.png" alt="" width={48} height={48} className="h-12 w-12" />
+            <div>
             <p className="font-titulo text-[22px] font-bold text-marino">{siglas}</p>
             <p className="text-[13px] text-tenue">{institucion}</p>
+            </div>
           </div>
           <h1 className="text-[28px] font-bold text-marino">{titulo}</h1>
           {subtitulo && <p className="mb-6 mt-1 text-[14px] text-tenue">{subtitulo}</p>}

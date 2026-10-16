@@ -4,7 +4,7 @@ import { NextResponse, type NextRequest } from 'next/server';
  * Filtro rápido: sin cookie de sesión, todo lo que no sea público va a /login.
  * La validación real de la sesión (BD, expiración, rol) ocurre en el servidor en cada página y acción.
  */
-const PUBLICAS = ['/login', '/instalacion', '/api/logo', '/favicon.ico', '/icon.svg'];
+const PUBLICAS = ['/login', '/instalacion', '/api/logo', '/favicon.ico', '/icon.png'];
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -26,4 +26,4 @@ export function middleware(req: NextRequest) {
   return NextResponse.next();
 }
 
-export const config = { matcher: ['/((?!_next/static|_next/image|fonts/).*)'] };
+export const config = { matcher: ['/((?!_next/static|_next/image|fonts/|.*\\.png$).*)'] };
