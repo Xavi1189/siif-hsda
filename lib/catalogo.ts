@@ -90,7 +90,7 @@ export interface ProductoDetalle {
 
 export async function obtenerProducto(tx: Tx, id: number): Promise<ProductoDetalle | null> {
   const pr = (await tx.query<ProductoDetalle['producto']>(
-    `SELECT id, clave, tipo, descripcion, nombre_generico, nombre_comercial, concentracion, forma_farmaceutica, presentacion,
+    `SELECT id, clave, tipo, descripcion, nombre_generico, nombre_comercial, concentracion, forma_farmaceutica,
             unidad_minima, laboratorio, registro_sanitario, grupo_terapeutico, cuadro_basico,
             costo_unitario::text, controlado, grupo_controlado, requiere_lote, requiere_caducidad, estatus, origen, creado, actualizado
        FROM productos WHERE id = $1`, [id])).rows[0];
@@ -135,7 +135,7 @@ export const esquemaProducto = z.object({
   tipo: z.enum(['medicamento', 'dispositivo_medico', 'insumo']),
   descripcion: z.string().trim().min(3, 'La descripción es obligatoria.').max(250).transform((s) => s.toUpperCase()),
   nombre_generico: texto(150), nombre_comercial: texto(150), concentracion: texto(80),
-  forma_farmaceutica: texto(80), presentacion: texto(120),
+  forma_farmaceutica: texto(80),
   unidad_minima: z.string().trim().min(2, 'Indica la unidad mínima dispensable (ampolleta, tableta, pieza…).').max(30).transform((s) => s.toUpperCase()),
   laboratorio: texto(120), registro_sanitario: texto(60), grupo_terapeutico: texto(120),
   cuadro_basico: z.coerce.boolean(),
@@ -146,7 +146,7 @@ export const esquemaProducto = z.object({
 });
 export type DatosProducto = z.infer<typeof esquemaProducto>;
 
-const CAMPOS = ['clave', 'tipo', 'descripcion', 'nombre_generico', 'nombre_comercial', 'concentracion', 'forma_farmaceutica', 'presentacion',
+const CAMPOS = ['clave', 'tipo', 'descripcion', 'nombre_generico', 'nombre_comercial', 'concentracion', 'forma_farmaceutica',
   'unidad_minima', 'laboratorio', 'registro_sanitario', 'grupo_terapeutico', 'cuadro_basico', 'costo_unitario',
   'requiere_lote', 'requiere_caducidad', 'estatus'] as const;
 

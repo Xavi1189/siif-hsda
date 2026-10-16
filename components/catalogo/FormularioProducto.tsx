@@ -15,7 +15,7 @@ export type DatosFormulario = Record<string, string | boolean | null>;
 
 const VACIO: DatosFormulario = {
   clave: '', tipo: 'medicamento', descripcion: '', nombre_generico: '', nombre_comercial: '', concentracion: '', forma_farmaceutica: '',
-  presentacion: '', unidad_minima: '', laboratorio: '', registro_sanitario: '', grupo_terapeutico: '',
+  unidad_minima: '', laboratorio: '', registro_sanitario: '', grupo_terapeutico: '',
   cuadro_basico: false, costo_unitario: '0', requiere_lote: true, requiere_caducidad: true, estatus: 'activo',
 };
 
@@ -69,7 +69,6 @@ export function FormularioProducto({ id, inicial, editable }: { id: number | nul
         <legend className="rotulo mb-2">Presentación y unidad</legend>
         {txt('concentracion', 'Concentración')}
         {txt('forma_farmaceutica', 'Forma farmacéutica')}
-        {txt('presentacion', 'Presentación comercial')}
         {txt('unidad_minima', 'Unidad mínima dispensable', { required: true, placeholder: 'Elige o escribe', list: 'unidades-minimas' })}
         <datalist id="unidades-minimas">
           {UNIDADES.map((u) => <option key={u} value={u} />)}
