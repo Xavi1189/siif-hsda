@@ -5,6 +5,7 @@ import { Save } from 'lucide-react';
 import { guardarProductoAccion } from '@/app/(sistema)/acciones';
 import { useAccion } from '../useAccion';
 import { Aviso } from '../ui';
+import { GRUPOS_TERAPEUTICOS } from '@/lib/grupos';
 
 /** Unidades dispensables más comunes; se puede escribir otra. */
 const UNIDADES = ['TABLETA', 'CÁPSULA', 'GRAGEA', 'COMPRIMIDO', 'AMPULA', 'FRASCO ÁMPULA', 'JERINGA PRELLENADA', 'FRASCO', 'BOLSA', 'SOBRE',
@@ -79,7 +80,16 @@ export function FormularioProducto({ id, inicial, editable }: { id: number | nul
         <legend className="rotulo mb-2">Origen y cuadro básico</legend>
         {txt('laboratorio', 'Laboratorio / fabricante')}
         {txt('registro_sanitario', 'Registro sanitario')}
-        {txt('grupo_terapeutico', 'Grupo terapéutico')}
+        <div>
+          <label htmlFor="p-grupo_terapeutico" className="etiqueta-campo">Grupo terapéutico</label>
+          <select id="p-grupo_terapeutico" className="campo" value={String(d.grupo_terapeutico ?? '')} disabled={!editable}
+            onChange={(e) => set('grupo_terapeutico', e.target.value)}>
+            <option value="">Sin grupo</option>
+            {/* Conserva un valor capturado antes que no esté en la lista del Compendio */}
+            {d.grupo_terapeutico && !(GRUPOS_TERAPEUTICOS as readonly string[]).includes(String(d.grupo_terapeutico)) && <option value={String(d.grupo_terapeutico)}>{String(d.grupo_terapeutico)}</option>}
+            {GRUPOS_TERAPEUTICOS.map((g) => <option key={g} value={g}>{g}</option>)}
+          </select>
+        </div>
         <label className="flex items-start gap-2 rounded-md border border-linea px-3 py-2.5 text-[14px]">
           <input type="checkbox" className="mt-0.5 h-4 w-4 accent-clinico" checked={!!d.cuadro_basico} onChange={(e) => set('cuadro_basico', e.target.checked)} />
           <span>Cuadro básico<span className="block text-[12px] text-tenue">Pertenece al cuadro básico de medicamentos.</span></span>

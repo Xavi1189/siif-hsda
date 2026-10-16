@@ -8,7 +8,7 @@ import {
   agregarPresentacion, buscarPorCodigo, cambiarControlado, cambiarEtiqueta, desactivarCodigo, desactivarPresentacion, guardarParametrosArea,
   guardarProducto, sugerirProductos, verificarCodigo, vincularCodigo, ErrorNegocio, type ResultadoLectura,
 } from '@/lib/catalogo';
-import { importarCatalogoSiho, type CorteSiho, type ResumenImportacion } from '@/lib/siho';
+import { asignarGruposTerapeuticos, importarCatalogoSiho, type CorteSiho, type GruposPorClave, type ResumenImportacion } from '@/lib/siho';
 import { cambiarRolEstado, crearUsuario, restablecerContrasena } from '@/lib/usuarios';
 import { auditar } from '@/lib/auditoria';
 
@@ -75,11 +75,13 @@ export async function desactivarCodigoAccion(productoId: number, codigoId: numbe
   return r;
 }
 
-export async function importarSihoAccion(): Promise<Resultado<ResumenImportacion>> {
-  // El corte se importa dinámicamente para que quede empaquetado en la función de Vercel
+export async function importarSihoAccion(): Promise<Resultado<ResumenImportacion & { gruposAsignados: number }>> {
+  // Los archivos se importan dinámicamente para que queden empaquetados en la función de Vercel
   const r = await accion('catalogo.importar', async (tx, a) => {
     const corte = (await import('@/data/siho-catalogo-2026-10-15.json')).default as unknown as CorteSiho;
-    return importarCatalogoSiho(tx, a, corte);
+    const grupos = (await import('@/data/grupos-terapeuticos-2026-10-15.json')).default as unknown as GruposPorClave;
+    const resumen = await importarCatalogoSiho(tx, a, corte);
+    return { ...resumen, gruposAsignados: await asignarGruposTerapeuticos(tx, a, grupos) };
   });
   revalidatePath('/', 'layout');
   return r;

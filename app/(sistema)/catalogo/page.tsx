@@ -16,10 +16,11 @@ export default async function Catalogo({ searchParams }: { searchParams: Promise
   const sp = await searchParams;
   const c = await db();
   const r = await buscarProductos(c, {
-    q: sp.q, tipo: sp.tipo, estatus: sp.estatus, etiqueta: sp.etiqueta, area: sp.area,
+    q: sp.q, grupo: sp.grupo, tipo: sp.tipo, estatus: sp.estatus, etiqueta: sp.etiqueta, area: sp.area,
     sinCodigo: sp.sin_codigo === '1', controlado: sp.controlado === '1', cuadroBasico: sp.cuadro_basico === '1', antibiotico: sp.antibiotico === '1', pagina: Number(sp.pagina) || 1,
   });
   const etiquetas = (await c.query<{ codigo: string; nombre: string }>('SELECT codigo, nombre FROM etiquetas WHERE activa ORDER BY id')).rows;
+  const grupos = (await c.query<{ g: string }>(`SELECT DISTINCT grupo_terapeutico g FROM productos WHERE grupo_terapeutico IS NOT NULL ORDER BY 1`)).rows.map((x) => x.g);
   const filtros = { ...sp };
   const enlace = (pagina: number) => '/catalogo?' + new URLSearchParams({ ...Object.fromEntries(Object.entries(filtros).filter(([, v]) => v)) as Record<string, string>, pagina: String(pagina) });
 
@@ -34,6 +35,7 @@ export default async function Catalogo({ searchParams }: { searchParams: Promise
           <input id="q" name="q" defaultValue={sp.q} className="campo" placeholder="Clave, nombre, laboratorio, código o ubicación" />
         </div>
         <Seleccion nombre="area" valor={sp.area} rotulo="Área" opciones={[['', 'Ambas farmacias'], ['HOSP', 'Hospitalaria'], ['URG', 'Urgencias']]} />
+        <Seleccion nombre="grupo" valor={sp.grupo} rotulo="Grupo terapéutico" opciones={[['', 'Todos los grupos terapéuticos'], ...grupos.map((g) => [g, g] as [string, string])]} />
         <Seleccion nombre="tipo" valor={sp.tipo} rotulo="Tipo" opciones={[['', 'Todos los tipos'], ...Object.entries(TIPOS)]} />
         <Seleccion nombre="etiqueta" valor={sp.etiqueta} rotulo="Etiqueta" opciones={[['', 'Cualquier etiqueta'], ...etiquetas.map((e) => [e.codigo, e.nombre] as [string, string])]} />
         <Seleccion nombre="estatus" valor={sp.estatus} rotulo="Estatus" opciones={[['', 'Cualquier estatus'], ['activo', 'Activo'], ['inactivo', 'Inactivo'], ['descontinuado', 'Descontinuado']]} />
@@ -67,7 +69,7 @@ export default async function Catalogo({ searchParams }: { searchParams: Promise
                     <td className="whitespace-nowrap font-mono text-[13px]"><Link href={`/catalogo/${p.id}`} className="text-clinico after:absolute after:inset-0 hover:underline">{p.clave}</Link></td>
                     <td>
                       <span className="font-medium">{p.descripcion}</span>
-                      <span className="block text-[13px] text-tenue">{p.unidad_minima.toLowerCase()}{p.factor ? <> · {p.presentacion?.toLowerCase()} c/{p.factor}</> : null}</span>
+                      <span className="block text-[13px] text-tenue">{p.unidad_minima.toLowerCase()}{p.factor ? <> · {p.presentacion?.toLowerCase()} c/{p.factor}</> : null}{p.grupo_terapeutico && <> · {p.grupo_terapeutico}</>}</span>
                       <span className="mt-1 flex flex-wrap gap-1">
                         {p.estatus !== 'activo' && <Insignia tono="neutro">{p.estatus === 'inactivo' ? 'Inactivo' : 'Descontinuado'}</Insignia>}
                         {p.tipo !== 'medicamento' && <Insignia tono="info">{TIPOS[p.tipo]}</Insignia>}

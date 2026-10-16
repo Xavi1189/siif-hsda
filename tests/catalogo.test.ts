@@ -6,12 +6,13 @@ import {
   agregarPresentacion, buscarPorCodigo, buscarProductos, cambiarControlado, cambiarEtiqueta, desactivarCodigo, guardarParametrosArea,
   guardarProducto, obtenerProducto, verificarCodigo, vincularCodigo, type Actor,
 } from '@/lib/catalogo';
-import { importarCatalogoSiho, type CorteSiho } from '@/lib/siho';
+import { asignarGruposTerapeuticos, importarCatalogoSiho, type CorteSiho, type GruposPorClave } from '@/lib/siho';
 import { tienePermiso, ROLES } from '@/lib/permisos';
 
 let db: Db;
 let admin: Actor, encargado: Actor, auxiliar: Actor, consulta: Actor;
 const corte: CorteSiho = JSON.parse(fs.readFileSync('data/siho-catalogo-2026-10-15.json', 'utf8'));
+const grupos: GruposPorClave = JSON.parse(fs.readFileSync('data/grupos-terapeuticos-2026-10-15.json', 'utf8'));
 const base = {
   clave: 'X100', tipo: 'medicamento', descripcion: 'Ketorolaco 30mg/1ml sol iny', unidad_minima: 'ampula', costo_unitario: 12.5,
   cuadro_basico: true, requiere_lote: true, requiere_caducidad: true, estatus: 'activo',
@@ -47,6 +48,17 @@ describe('importación del SIHO', () => {
   });
   it('solo administrador o Responsable Sanitario importan', async () => {
     await expect(importarCatalogoSiho(db, encargado, corte)).rejects.toThrow(/permiso/);
+    await expect(asignarGruposTerapeuticos(db, encargado, grupos)).rejects.toThrow(/permiso/);
+  });
+  it('asigna el grupo terapéutico a las 826 claves sin sobrescribir lo capturado en SIIF', async () => {
+    await db.query(`UPDATE productos SET grupo_terapeutico = 'Oncología' WHERE clave = '1010100100'`);
+    expect(await db.tx((tx) => asignarGruposTerapeuticos(tx, admin, grupos))).toBe(825);
+    const g = (await db.query<{ clave: string; grupo_terapeutico: string }>(
+      `SELECT clave, grupo_terapeutico FROM productos WHERE clave IN ('1010100100', '1010200032') ORDER BY clave`)).rows;
+    expect(g).toEqual([{ clave: '1010100100', grupo_terapeutico: 'Oncología' }, { clave: '1010200032', grupo_terapeutico: 'Analgesia' }]);
+    expect((await db.query<{ n: number }>(`SELECT count(*)::int n FROM productos WHERE origen = 'siho' AND grupo_terapeutico IS NULL`)).rows[0].n).toBe(0);
+    expect(await db.tx((tx) => asignarGruposTerapeuticos(tx, admin, grupos))).toBe(0); // idempotente
+    expect((await buscarProductos(db, { grupo: 'Analgesia' })).total).toBe(99);
   });
 });
 

@@ -76,3 +76,27 @@ export async function importarCatalogoSiho(tx: Tx, a: Actor, corte: CorteSiho): 
   await auditar(tx, { usuarioId: a.id, accion: 'catalogo.importar_siho', entidad: 'catalogo', detalle: { fecha_corte: corte.fecha_corte, ...r }, ip: a.ip });
   return r;
 }
+
+// ---------------------------------------------------------------------------
+// Grupos terapéuticos (Compendio Nacional de Insumos para la Salud)
+// ---------------------------------------------------------------------------
+export { GRUPOS_TERAPEUTICOS } from './grupos';
+
+export interface GruposPorClave { fecha_corte: string; claves: Record<string, string> }
+
+/**
+ * Asigna el grupo terapéutico por clave. Solo llena productos que aún no tienen grupo:
+ * nunca sobrescribe lo que alguien capturó o corrigió en SIIF.
+ */
+export async function asignarGruposTerapeuticos(tx: Tx, a: Actor, datos: GruposPorClave): Promise<number> {
+  if (!tienePermiso(a.rol, 'catalogo.importar')) throw new ErrorPermiso('catalogo.importar');
+  const claves = Object.keys(datos.claves);
+  const r = await tx.query<{ n: string }>(
+    `WITH g AS (SELECT * FROM unnest($1::text[], $2::text[]) AS x(clave, grupo)),
+          u AS (UPDATE productos p SET grupo_terapeutico = g.grupo, actualizado = now(), actualizado_por = $3
+                  FROM g WHERE p.clave = g.clave AND (p.grupo_terapeutico IS NULL OR trim(p.grupo_terapeutico) = '') RETURNING 1)
+     SELECT count(*) AS n FROM u`, [claves, claves.map((c) => datos.claves[c]), a.id]);
+  const n = Number(r.rows[0].n);
+  if (n) await auditar(tx, { usuarioId: a.id, accion: 'catalogo.grupos_terapeuticos', entidad: 'catalogo', detalle: { fecha_corte: datos.fecha_corte, asignados: n }, ip: a.ip });
+  return n;
+}

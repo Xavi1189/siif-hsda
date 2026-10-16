@@ -36,6 +36,7 @@ Documentos relacionados: [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md) (arquite
 | Presentaciones con factor de conversión explícito a unidad mínima | ✅ |
 | Etiquetas de seguridad: controlado (con grupo), LASA, alto riesgo (incluye electrolitos concentrados), cadena fría y antibiótico (texto + ícono, no solo color) | ✅ |
 | Marca de cuadro básico de medicamentos | ✅ |
+| Grupo terapéutico (Compendio Nacional) asignado a las 826 claves desde el archivo de la farmacia; filtro por grupo | ✅ |
 | Controlados (marca y grupo I/II/III, con permiso especial) | ✅ |
 | Parámetros por área: mínimo, máximo, punto de reorden, stock de seguridad, tiempo de entrega | ✅ |
 | Importación del catálogo del SIHO (corte 15/10/2026: 826 productos, 1,090 registros producto-área) | ✅ |
@@ -116,7 +117,7 @@ Nunca se guardan credenciales en el código ni en el repositorio (`.env*` está 
 ## 7. Pruebas
 
 ```bash
-npm test          # 64 pruebas sobre PostgreSQL real (PGlite), sin configurar nada
+npm test          # 65 pruebas sobre PostgreSQL real (PGlite), sin configurar nada
 npm run typecheck
 npm run build
 ```

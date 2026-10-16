@@ -19,12 +19,12 @@ function exigir(a: Actor, p: Parameters<typeof tienePermiso>[1]) {
 // Consultas
 // ---------------------------------------------------------------------------
 export interface FiltroCatalogo {
-  q?: string; tipo?: string; estatus?: string; etiqueta?: string; area?: string;
+  q?: string; tipo?: string; estatus?: string; etiqueta?: string; area?: string; grupo?: string;
   sinCodigo?: boolean; controlado?: boolean; cuadroBasico?: boolean; antibiotico?: boolean; pagina?: number; porPagina?: number;
 }
 export interface FilaCatalogo {
   id: number; clave: string; descripcion: string; tipo: string; unidad_minima: string; estatus: string;
-  costo_unitario: string; controlado: boolean; grupo_controlado: string | null; cuadro_basico: boolean;
+  costo_unitario: string; controlado: boolean; grupo_controlado: string | null; cuadro_basico: boolean; grupo_terapeutico: string | null;
   presentacion: string | null; factor: number | null; codigos: number; codigos_sin_verificar: number;
   etiquetas: { codigo: string; nombre: string; icono: string; tono: string }[];
   ubicaciones: { area: string; ubicacion: string | null }[];
@@ -44,6 +44,7 @@ export async function buscarProductos(tx: Tx, f: FiltroCatalogo): Promise<{ fila
   if (f.estatus) { p.push(f.estatus); cond.push(`pr.estatus = $${p.length}::estatus_producto`); }
   if (f.controlado) cond.push('pr.controlado');
   if (f.cuadroBasico) cond.push('pr.cuadro_basico');
+  if (f.grupo) { p.push(f.grupo); cond.push(`pr.grupo_terapeutico = $${p.length}`); }
   if (f.antibiotico) cond.push(`EXISTS (SELECT 1 FROM producto_etiquetas pe JOIN etiquetas e ON e.id = pe.etiqueta_id WHERE pe.producto_id = pr.id AND e.codigo = 'ANTIBIOTICO')`);
   if (f.sinCodigo) cond.push('NOT EXISTS (SELECT 1 FROM codigos_barras cb WHERE cb.producto_id = pr.id AND cb.activo)');
   if (f.etiqueta) {
@@ -61,7 +62,7 @@ export async function buscarProductos(tx: Tx, f: FiltroCatalogo): Promise<{ fila
   const pagina = Math.min(Math.max(1, f.pagina ?? 1), paginas);
   p.push(porPagina, (pagina - 1) * porPagina);
   const filas = (await tx.query<FilaCatalogo>(`
-    SELECT pr.id, pr.clave, pr.descripcion, pr.tipo, pr.unidad_minima, pr.estatus, pr.costo_unitario::text, pr.controlado, pr.grupo_controlado, pr.cuadro_basico,
+    SELECT pr.id, pr.clave, pr.descripcion, pr.tipo, pr.unidad_minima, pr.estatus, pr.costo_unitario::text, pr.controlado, pr.grupo_controlado, pr.cuadro_basico, pr.grupo_terapeutico,
       (SELECT ps.nombre FROM presentaciones ps WHERE ps.producto_id = pr.id AND ps.activa AND ps.factor > 1 ORDER BY ps.factor LIMIT 1) AS presentacion,
       (SELECT ps.factor FROM presentaciones ps WHERE ps.producto_id = pr.id AND ps.activa AND ps.factor > 1 ORDER BY ps.factor LIMIT 1) AS factor,
       (SELECT count(*)::int FROM codigos_barras cb WHERE cb.producto_id = pr.id AND cb.activo) AS codigos,

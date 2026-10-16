@@ -62,12 +62,12 @@ export function ImportarSiho({ productos, puede }: { productos: number; puede: b
   const [resumen, setResumen] = useState<string | null>(null);
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-[14px] text-tenue">Corte del reporte <em>Existencias</em> del SIHO del 15/10/2026: 826 productos únicos (404 registros de Urgencias y 686 de la Farmacia Hospitalaria). Importa clave, descripción, unidad mínima, contenido por caja, costo y localización. <strong className="text-tinta">No carga existencias</strong>: el inventario inicial saldrá del conteo físico.</p>
+      <p className="text-[14px] text-tenue">Corte del reporte <em>Existencias</em> del SIHO del 15/10/2026: 826 productos únicos (404 registros de Urgencias y 686 de la Farmacia Hospitalaria). Importa clave, descripción, unidad mínima, contenido por caja, costo, localización y grupo terapéutico (archivo de grupos de la farmacia; solo llena los productos que no lo tengan). <strong className="text-tinta">No carga existencias</strong>: el inventario inicial saldrá del conteo físico.</p>
       {estado && <Aviso tono={estado.tono}>{estado.texto}</Aviso>}
       {resumen && <Aviso tono="exito">{resumen}</Aviso>}
       <div className="flex flex-wrap items-center gap-3">
         <button className="btn-primario" disabled={!puede || pendiente} onClick={() => ejecutar(() => importarSihoAccion(), (r) => {
-          setResumen(`Listo: ${r.productosNuevos} productos nuevos, ${r.productosExistentes} ya existían, ${r.presentacionesNuevas} presentaciones nuevas, ${r.ubicacionesActualizadas} localizaciones actualizadas.`);
+          setResumen(`Listo: ${r.productosNuevos} productos nuevos, ${r.productosExistentes} ya existían, ${r.presentacionesNuevas} presentaciones nuevas, ${r.ubicacionesActualizadas} localizaciones actualizadas, ${r.gruposAsignados} grupos terapéuticos asignados.`);
           router.refresh();
         })}><Database size={16} aria-hidden />{pendiente ? 'Importando…' : productos ? 'Volver a importar (solo agrega lo que falte)' : 'Importar catálogo del SIHO'}</button>
         <span className="text-[13px] text-tenue">Productos en el catálogo: <span className="font-mono text-tinta">{productos.toLocaleString('es-MX')}</span></span>
