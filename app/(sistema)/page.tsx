@@ -88,9 +88,9 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
           <Seccion titulo="Catálogo por área" descripcion="Productos que maneja cada farmacia según el SIHO y los parámetros capturados.">
             <div className="grid gap-3 sm:grid-cols-2">
               {[{ n: 'Farmacia Hospitalaria (4to piso)', v: k.hosp }, { n: 'Farmacia de Urgencias', v: k.urg }].map((a) => (
-                <div key={a.n} className="rounded-md border border-linea px-3 py-2.5">
+                <div key={a.n} className="rounded-xl bg-[#F6F3EE] px-4 py-3">
                   <p className="text-[13px] text-tenue">{a.n}</p>
-                  <p className="mt-0.5 font-mono text-[22px] font-medium tabular-nums">{num(a.v)} <span className="font-sans text-[13px] text-tenue">productos</span></p>
+                  <p className="mt-0.5 font-titulo text-[24px] font-semibold tabular-nums text-marino">{num(a.v)} <span className="font-sans text-[13px] text-tenue">productos</span></p>
                 </div>
               ))}
             </div>
@@ -127,9 +127,14 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
 
 function Indicador({ icono, rotulo, valor, detalle, calculo, barra }: { icono: React.ReactNode; rotulo: string; valor: string; detalle: string; calculo: string; barra?: number }) {
   return (
-    <div className="tarjeta px-4 py-3.5">
-      <dt className="flex items-center gap-2 text-[13px] font-medium text-tenue"><span className="text-clinico">{icono}</span>{rotulo}</dt>
-      <dd className="mt-1 font-mono text-[28px] font-medium leading-none tabular-nums text-marino">{valor}</dd>
+    <div className="tarjeta px-4 py-4">
+      <div className="flex items-center gap-3">
+        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#EDF1F6] text-marino" aria-hidden>{icono}</span>
+        <div className="min-w-0">
+          <dt className="text-[13px] text-tenue">{rotulo}</dt>
+          <dd className="font-titulo text-[26px] font-semibold leading-tight tabular-nums text-marino">{valor}</dd>
+        </div>
+      </div>
       <dd className="mt-1.5 text-[13px] text-tenue">{detalle}</dd>
       {barra != null && <dd className="mt-2 h-1.5 overflow-hidden rounded bg-fondo"><span className="block h-full bg-teal" style={{ width: `${Math.min(100, barra)}%` }} /></dd>}
       <dd className="mt-2 border-t border-linea pt-2 text-[12px] text-tenue"><span className="font-semibold">Cálculo:</span> {calculo}</dd>

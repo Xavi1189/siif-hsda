@@ -1,13 +1,26 @@
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight, PackageSearch, Plus } from 'lucide-react';
+import {
+  Activity, Apple, Baby, Bone, Brain, BrainCircuit, Bug, CalendarHeart, ChevronDown, ChevronLeft, ChevronRight, Droplet, Droplets, Ear, Eye,
+  FlaskRound, Hand, HeartPulse, Package, PackageSearch, Pill, Plus, Ribbon, ScanBarcode, Search, ShieldAlert, ShieldPlus, Smile,
+  Stethoscope, Syringe, Utensils, Wind, BadgeCheck, Bean, type LucideIcon,
+} from 'lucide-react';
 import { db } from '@/lib/db';
 import { exigirUsuario } from '@/lib/servidor';
 import { buscarProductos } from '@/lib/catalogo';
 import { tienePermiso } from '@/lib/permisos';
 import { mxn, num } from '@/lib/formato';
-import { Controlado, Encabezado, EtiquetaProducto, Insignia, Vacio } from '@/components/ui';
+import { Controlado, Encabezado, EtiquetaProducto, Insignia, Kpi, Vacio } from '@/components/ui';
 
 export const metadata = { title: 'Catálogo' };
+
+const ICONO_GRUPO: Record<string, LucideIcon> = {
+  'Analgesia': Pill, 'Anestesia': Syringe, 'Cardiología': HeartPulse, 'Dermatología': Hand, 'Endocrinología y Metabolismo': Activity,
+  'Enfermedades Infecciosas y Parasitarias': Bug, 'Enfermedades Inmunoalérgicas': ShieldPlus, 'Estomatología (uso bucal)': Smile,
+  'Gastroenterología': Utensils, 'Gineco-Obstetricia': Baby, 'Hematología': Droplets, 'Intoxicaciones': FlaskRound, 'Nefrología y Urología': Bean,
+  'Neumología': Wind, 'Neurología': Brain, 'Nutriología': Apple, 'Oftalmología': Eye, 'Oncología': Ribbon, 'Otorrinolaringología': Ear,
+  'Planificación Familiar': CalendarHeart, 'Psiquiatría': BrainCircuit, 'Reumatología y Traumatología': Bone,
+  'Soluciones Electrolíticas y Sustitutos del Plasma': Droplet, 'Vacunas, Toxoides, Inmunoglobulinas, Antitoxinas': Syringe,
+};
 
 const TIPOS: Record<string, string> = { medicamento: 'Medicamento', dispositivo_medico: 'Dispositivo médico', insumo: 'Insumo' };
 
@@ -20,8 +33,23 @@ export default async function Catalogo({ searchParams }: { searchParams: Promise
     sinCodigo: sp.sin_codigo === '1', controlado: sp.controlado === '1', cuadroBasico: sp.cuadro_basico === '1', antibiotico: sp.antibiotico === '1', pagina: Number(sp.pagina) || 1,
   });
   const etiquetas = (await c.query<{ codigo: string; nombre: string }>('SELECT codigo, nombre FROM etiquetas WHERE activa ORDER BY id')).rows;
-  const grupos = (await c.query<{ g: string }>(`SELECT DISTINCT grupo_terapeutico g FROM productos WHERE grupo_terapeutico IS NOT NULL ORDER BY 1`)).rows.map((x) => x.g);
+  const porGrupo = (await c.query<{ g: string; n: number }>(
+    `SELECT grupo_terapeutico g, count(*)::int n FROM productos WHERE grupo_terapeutico IS NOT NULL AND estatus = 'activo' GROUP BY 1 ORDER BY 2 DESC, 1`)).rows;
+  const grupos = [...porGrupo].map((x) => x.g).sort((a, b) => a.localeCompare(b, 'es'));
+  const k = (await c.query<{ total: number; controlados: number; sin_codigo: number; cuadro: number; antibioticos: number }>(
+    `SELECT count(*)::int total, count(*) FILTER (WHERE controlado)::int controlados, count(*) FILTER (WHERE cuadro_basico)::int cuadro,
+            count(*) FILTER (WHERE NOT EXISTS (SELECT 1 FROM codigos_barras cb WHERE cb.producto_id = p.id AND cb.activo))::int sin_codigo,
+            count(*) FILTER (WHERE EXISTS (SELECT 1 FROM producto_etiquetas pe JOIN etiquetas e ON e.id = pe.etiqueta_id WHERE pe.producto_id = p.id AND e.codigo = 'ANTIBIOTICO'))::int antibioticos
+       FROM productos p WHERE estatus = 'activo'`)).rows[0];
   const filtros = { ...sp };
+  // Enlace a un grupo terapéutico conservando los demás filtros; tocar el grupo activo lo quita
+  const enlaceGrupo = (g: string) => {
+    const q = Object.fromEntries(Object.entries(filtros).filter(([key, v]) => v && key !== 'pagina' && key !== 'grupo')) as Record<string, string>;
+    if (sp.grupo !== g) q.grupo = g;
+    return '/catalogo' + (Object.keys(q).length ? '?' + new URLSearchParams(q) : '') + '#productos';
+  };
+  const VISIBLES = 8;
+  const activoOculto = porGrupo.findIndex((x) => x.g === sp.grupo) >= VISIBLES;
   const enlace = (pagina: number) => '/catalogo?' + new URLSearchParams({ ...Object.fromEntries(Object.entries(filtros).filter(([, v]) => v)) as Record<string, string>, pagina: String(pagina) });
 
   return (
@@ -29,10 +57,40 @@ export default async function Catalogo({ searchParams }: { searchParams: Promise
       <Encabezado titulo="Catálogo" descripcion="Medicamentos, dispositivos médicos e insumos de ambas farmacias. Busca por clave, nombre, laboratorio, código de barras o localización del SIHO."
         acciones={tienePermiso(u.rol, 'catalogo.editar') && <Link href="/catalogo/nuevo" className="btn-primario"><Plus size={16} aria-hidden />Nuevo producto</Link>} />
 
-      <form className="tarjeta mb-4 flex flex-wrap items-center gap-3 p-3" method="get">
+      <div className="mb-4 grid grid-cols-2 gap-3 xl:grid-cols-4">
+        <Kpi icono={<Package size={22} />} rotulo="Productos activos" valor={num(k.total)} href="/catalogo#productos" />
+        <Kpi icono={<ShieldAlert size={22} />} tono="peligro" rotulo="Controlados" valor={num(k.controlados)} href="/catalogo?controlado=1#productos" />
+        <Kpi icono={<BadgeCheck size={22} />} tono="info" rotulo="Cuadro básico" valor={num(k.cuadro)} detalle={`${num(k.antibioticos)} con etiqueta de antibiótico`} href="/catalogo?cuadro_basico=1#productos" />
+        <Kpi icono={<ScanBarcode size={22} />} tono="alerta" rotulo="Sin código de barras" valor={num(k.sin_codigo)} href="/catalogo?sin_codigo=1#productos" />
+      </div>
+
+      {porGrupo.length > 0 && (
+        <section aria-label="Grupos terapéuticos" className="mb-4">
+          <ul className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+            {porGrupo.slice(0, VISIBLES).map((x) => <TarjetaGrupo key={x.g} grupo={x.g} n={x.n} activo={sp.grupo === x.g} href={enlaceGrupo(x.g)} />)}
+          </ul>
+          {porGrupo.length > VISIBLES && (
+            <details className="group mt-3" open={activoOculto}>
+              <summary className="btn-secundario btn-chico w-fit cursor-pointer list-none">
+                <ChevronDown size={14} aria-hidden className="transition-transform group-open:rotate-180" />
+                <span className="group-open:hidden">Ver los {porGrupo.length} grupos terapéuticos</span><span className="hidden group-open:inline">Ver menos</span>
+              </summary>
+              <ul className="mt-3 grid grid-cols-2 gap-3 xl:grid-cols-4">
+                {porGrupo.slice(VISIBLES).map((x) => <TarjetaGrupo key={x.g} grupo={x.g} n={x.n} activo={sp.grupo === x.g} href={enlaceGrupo(x.g)} />)}
+              </ul>
+            </details>
+          )}
+        </section>
+      )}
+
+      <div id="productos" className="tarjeta scroll-mt-28 overflow-hidden">
+        <form className="flex flex-wrap items-center gap-3 border-b border-[#ECE8E1] p-4" method="get">
         <div className="min-w-[240px] flex-[2_1_280px]">
           <label htmlFor="q" className="sr-only">Buscar</label>
-          <input id="q" name="q" defaultValue={sp.q} className="campo" placeholder="Clave, nombre, laboratorio, código o ubicación" />
+          <div className="relative">
+            <Search size={16} aria-hidden className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-tenue" />
+            <input id="q" name="q" defaultValue={sp.q} className="campo rounded-full pl-10" placeholder="Clave, nombre, laboratorio, código o ubicación" />
+          </div>
         </div>
         <Seleccion nombre="area" valor={sp.area} rotulo="Área" opciones={[['', 'Ambas farmacias'], ['HOSP', 'Hospitalaria'], ['URG', 'Urgencias']]} />
         <Seleccion nombre="grupo" valor={sp.grupo} rotulo="Grupo terapéutico" opciones={[['', 'Todos los grupos terapéuticos'], ...grupos.map((g) => [g, g] as [string, string])]} />
@@ -44,12 +102,11 @@ export default async function Catalogo({ searchParams }: { searchParams: Promise
           <label className="flex items-center gap-1.5 text-[13px] text-tenue"><input type="checkbox" name="controlado" value="1" defaultChecked={sp.controlado === '1'} className="h-4 w-4 accent-clinico" />Controlados</label>
           <label className="flex items-center gap-1.5 text-[13px] text-tenue"><input type="checkbox" name="cuadro_basico" value="1" defaultChecked={sp.cuadro_basico === '1'} className="h-4 w-4 accent-clinico" />Cuadro básico</label>
           <label className="flex items-center gap-1.5 text-[13px] text-tenue"><input type="checkbox" name="antibiotico" value="1" defaultChecked={sp.antibiotico === '1'} className="h-4 w-4 accent-clinico" />Antibióticos</label>
-          <button className="btn-secundario">Filtrar</button>
+          <button className="btn-primario">Filtrar</button>
         </div>
       </form>
 
-      <div className="tarjeta overflow-hidden">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-linea px-4 py-2.5 text-[13px] text-tenue">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-4 pb-1 pt-3 text-[13px] text-tenue">
           <span><span className="font-semibold text-tinta">{num(r.total)}</span> productos{Object.values(sp).some(Boolean) && <> · <Link href="/catalogo" className="text-clinico hover:underline">Quitar filtros</Link></>}</span>
           <span>Página {r.pagina} de {r.paginas}</span>
         </div>
@@ -60,7 +117,7 @@ export default async function Catalogo({ searchParams }: { searchParams: Promise
               : 'Prueba con menos palabras o quita algún filtro.'}
           </Vacio>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto px-3 pb-2">
             <table className="tabla min-w-[640px]">
               <thead><tr><th className="w-[1%]">Clave</th><th>Descripción</th><th className="w-[22%]">Ubicación SIHO</th><th className="num w-[1%] whitespace-nowrap">Costo</th><th className="w-[1%] whitespace-nowrap">Códigos</th></tr></thead>
               <tbody>
@@ -90,7 +147,7 @@ export default async function Catalogo({ searchParams }: { searchParams: Promise
           </div>
         )}
         {r.paginas > 1 && (
-          <nav className="flex items-center justify-end gap-2 border-t border-linea px-4 py-2.5" aria-label="Paginación">
+          <nav className="flex items-center justify-end gap-2 px-4 pb-4 pt-2" aria-label="Paginación">
             {r.pagina > 1 ? <Link className="btn-secundario btn-chico" href={enlace(r.pagina - 1)}><ChevronLeft size={14} aria-hidden />Anterior</Link> : <span className="btn-secundario btn-chico opacity-40">Anterior</span>}
             {r.pagina < r.paginas ? <Link className="btn-secundario btn-chico" href={enlace(r.pagina + 1)}>Siguiente<ChevronRight size={14} aria-hidden /></Link> : <span className="btn-secundario btn-chico opacity-40">Siguiente</span>}
           </nav>
@@ -108,5 +165,24 @@ function Seleccion({ nombre, valor, rotulo, opciones }: { nombre: string; valor?
         {opciones.map(([v, t]) => <option key={v} value={v}>{t}</option>)}
       </select>
     </div>
+  );
+}
+
+function TarjetaGrupo({ grupo, n, activo, href }: { grupo: string; n: number; activo: boolean; href: string }) {
+  const I = ICONO_GRUPO[grupo] ?? Stethoscope;
+  return (
+    <li>
+      <Link href={href} aria-current={activo ? 'true' : undefined}
+        className={`flex h-full items-end justify-between gap-2 rounded-2xl border px-3 py-3 sm:gap-3 sm:px-4 sm:py-3.5 transition-shadow hover:shadow-md ${activo
+          ? 'border-transparent bg-gradient-to-br from-marino to-marino-600 text-white shadow-tarjeta'
+          : 'border-[#ECE8E1] bg-white shadow-tarjeta'}`}>
+        <span className="min-w-0">
+          <span className={`block truncate text-[13px] ${activo ? 'text-marino-100' : 'text-tenue'}`} title={grupo}>{grupo}</span>
+          <span className={`mt-2 block font-titulo text-[24px] sm:text-[28px] font-semibold leading-none tabular-nums ${activo ? 'text-white' : 'text-marino'}`}>{num(n)}</span>
+          <span className={`mt-1 block text-[12px] ${activo ? 'text-marino-300' : 'text-tenue'}`}>{activo ? 'Filtrando · toca para quitar' : 'productos activos'}</span>
+        </span>
+        <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full sm:h-11 sm:w-11 ${activo ? 'bg-marino-300 text-marino' : 'bg-[#EDF1F6] text-marino'}`} aria-hidden><I size={20} /></span>
+      </Link>
+    </li>
   );
 }

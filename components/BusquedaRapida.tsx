@@ -42,10 +42,10 @@ export function BusquedaRapida({ ventanaMs, sonidoPredeterminado }: { ventanaMs:
   return (
     <form role="search" className="relative w-full max-w-md" onSubmit={(e) => { e.preventDefault(); if (q.trim()) resolver(q.trim(), false); }}>
       <label htmlFor="busqueda-rapida" className="sr-only">Buscar por código, clave, nombre o ubicación</label>
-      <Search size={16} aria-hidden className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-tenue" />
+      <Search size={16} aria-hidden className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-tenue" />
       <input id="busqueda-rapida" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar o escanear: código, clave, nombre, ubicación"
-        className="campo pl-9 pr-9" autoComplete="off" spellCheck={false} />
-      <ScanBarcode size={16} aria-hidden className={`absolute right-3 top-1/2 -translate-y-1/2 ${pendiente ? 'animate-pulse text-clinico' : 'text-tenue'}`} />
+        className="campo rounded-full border-[#ECE8E1] bg-[#FAF8F5] pl-10 pr-10" autoComplete="off" spellCheck={false} />
+      <ScanBarcode size={16} aria-hidden className={`absolute right-4 top-1/2 -translate-y-1/2 ${pendiente ? 'animate-pulse text-clinico' : 'text-tenue'}`} />
       {aviso && <span role="status" className="absolute left-0 top-full mt-1 rounded bg-marino px-2 py-1 text-[12px] text-white">{aviso}</span>}
     </form>
   );

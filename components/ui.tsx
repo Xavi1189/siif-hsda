@@ -26,7 +26,7 @@ export type Tono = keyof typeof TONOS;
 
 export function Insignia({ tono = 'neutro', children, icono, titulo }: { tono?: Tono; children: ReactNode; icono?: ReactNode; titulo?: string }) {
   return (
-    <span title={titulo} className={`inline-flex items-center gap-1 whitespace-nowrap rounded border px-1.5 py-0.5 text-[12px] font-semibold leading-none ${TONOS[tono]}`}>
+    <span title={titulo} className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-[12px] font-semibold leading-none ${TONOS[tono]}`}>
       {icono}{children}
     </span>
   );
@@ -70,14 +70,14 @@ export function Vacio({ titulo, children, icono }: { titulo: string; children?: 
 export function Seccion({ titulo, descripcion, acciones, children, className = '' }: { titulo: string; descripcion?: ReactNode; acciones?: ReactNode; children: ReactNode; className?: string }) {
   return (
     <section className={`tarjeta ${className}`}>
-      <header className="flex flex-wrap items-start justify-between gap-2 border-b border-linea px-4 py-3">
+      <header className="flex flex-wrap items-start justify-between gap-2 border-b border-[#ECE8E1] px-5 py-3.5">
         <div className="min-w-0">
           <h2 className="text-[17px] font-semibold text-marino">{titulo}</h2>
           {descripcion && <p className="mt-0.5 text-[13px] text-tenue">{descripcion}</p>}
         </div>
         {acciones}
       </header>
-      <div className="p-4">{children}</div>
+      <div className="p-5">{children}</div>
     </section>
   );
 }
@@ -89,4 +89,23 @@ export function Dato({ rotulo, children }: { rotulo: string; children: ReactNode
       <dd className="mt-0.5 break-words text-[15px]">{children ?? <span className="text-tenue">—</span>}</dd>
     </div>
   );
+}
+
+/** Indicador con ícono circular (resumen numérico). */
+export function Kpi({ icono, rotulo, valor, detalle, tono = 'neutro', href }: {
+  icono: ReactNode; rotulo: string; valor: string; detalle?: ReactNode; tono?: 'neutro' | 'alerta' | 'peligro' | 'info' | 'exito'; href?: string;
+}) {
+  const fondo = { neutro: 'bg-[#EDF1F6] text-marino', info: 'bg-clinico-claro text-clinico', alerta: 'bg-alerta-claro text-alerta', peligro: 'bg-peligro-claro text-peligro', exito: 'bg-teal-claro text-teal' }[tono];
+  const cuerpo = (
+    <>
+      <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-full sm:h-12 sm:w-12 ${fondo}`} aria-hidden>{icono}</span>
+      <span className="min-w-0">
+        <span className="block text-[13px] text-tenue">{rotulo}</span>
+        <span className="block font-titulo text-[22px] sm:text-[26px] font-semibold leading-tight tabular-nums text-marino">{valor}</span>
+        {detalle && <span className="block text-[12px] text-tenue">{detalle}</span>}
+      </span>
+    </>
+  );
+  const clase = 'tarjeta flex items-center gap-3 px-3 py-3 sm:gap-3.5 sm:px-4 sm:py-4';
+  return href ? <a href={href} className={`${clase} transition-shadow hover:shadow-md`}>{cuerpo}</a> : <div className={clase}>{cuerpo}</div>;
 }

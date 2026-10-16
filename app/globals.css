@@ -20,18 +20,21 @@
 }
 
 @layer components {
-  .campo { @apply w-full rounded-md border border-linea bg-white px-3 py-2 text-[15px] placeholder:text-tenue/70 focus:border-clinico focus:outline-none focus:ring-2 focus:ring-clinico/25 disabled:bg-fondo disabled:text-tenue; }
+  .campo { @apply w-full rounded-xl border border-linea bg-white px-3.5 py-2 text-[15px] placeholder:text-tenue/70 focus:border-clinico focus:outline-none focus:ring-2 focus:ring-clinico/25 disabled:bg-fondo disabled:text-tenue; }
   .campo-error { @apply border-peligro focus:border-peligro focus:ring-peligro/20; }
   .etiqueta-campo { @apply mb-1 block text-[13px] font-medium text-tenue; }
-  .btn { @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md border px-3.5 py-2 text-[14px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50; }
+  .btn { @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full border px-4 py-2 text-[14px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50; }
   .btn-primario { @apply btn border-clinico bg-clinico text-white hover:bg-clinico-oscuro; }
   .btn-secundario { @apply btn border-linea bg-white text-tinta hover:border-clinico hover:text-clinico; }
   .btn-fantasma { @apply btn border-transparent bg-transparent text-tenue hover:bg-clinico-claro hover:text-clinico; }
   .btn-peligro { @apply btn border-peligro/30 bg-white text-peligro hover:bg-peligro-claro; }
-  .btn-chico { @apply px-2.5 py-1 text-[13px]; }
-  .tarjeta { @apply rounded-lg border border-linea bg-white shadow-tarjeta; }
-  .tabla { @apply w-full border-collapse text-[14px]; }
-  .tabla th { @apply border-b border-linea bg-[#F7F9FB] px-3 py-2 text-left text-[12px] font-semibold uppercase tracking-wider text-tenue; }
+  .btn-chico { @apply px-3 py-1 text-[13px]; }
+  .btn-acento { @apply btn border-marino-300 bg-marino-300 text-marino hover:bg-[#93A8C4]; }
+  .tarjeta { @apply rounded-2xl border border-[#ECE8E1] bg-white shadow-tarjeta; }
+  .tabla { @apply w-full border-separate border-spacing-0 text-[14px]; }
+  .tabla th { @apply bg-[#EDF1F6] px-3 py-2.5 text-left text-[13px] font-semibold text-marino; }
+  .tabla th:first-child { @apply rounded-l-xl; }
+  .tabla th:last-child { @apply rounded-r-xl; }
   .tabla td { @apply border-b border-linea/70 px-3 py-2.5 align-top; }
   .tabla tbody tr:hover { @apply bg-clinico-claro/40; }
   .num { @apply text-right tabular-nums; }

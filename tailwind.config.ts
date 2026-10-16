@@ -23,7 +23,7 @@ export default {
         titulo: ['Avenir', '"Avenir Next"', 'Poppins', '"IBM Plex Sans"', 'sans-serif'],
         mono: ['"IBM Plex Mono"', 'ui-monospace', 'Menlo', 'Consolas', 'monospace'],
       },
-      boxShadow: { tarjeta: '0 1px 2px rgb(51 57 76 / 0.07), 0 1px 1px rgb(51 57 76 / 0.04)' },
+      boxShadow: { tarjeta: '0 1px 2px rgb(51 57 76 / 0.04), 0 6px 18px rgb(51 57 76 / 0.05)' },
     },
   },
   plugins: [],

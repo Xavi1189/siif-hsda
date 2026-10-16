@@ -26,7 +26,7 @@ export function Shell({ nav, institucion, siglas, tieneLogo, usuario, rol, fecha
 
   const lateral = (
     <nav aria-label="Módulos" className="flex h-full flex-col">
-      <Link href="/" className="flex items-center gap-3 px-5 pb-5 pt-5" onClick={() => setAbierto(false)}>
+      <Link href="/" className="flex items-center gap-3 px-5 pb-6 pt-6" onClick={() => setAbierto(false)}>
         {/* Isotipo blanco: uso alternativo del manual para espacios reducidos y contextos digitales */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/isotipo-blanco.png" alt="Hospital San Diego de Alcalá" width={44} height={44} className="h-11 w-11 shrink-0" />
@@ -46,10 +46,10 @@ export function Shell({ nav, institucion, siglas, tieneLogo, usuario, rol, fecha
                 return (
                   <li key={n.href}>
                     <Link href={n.href} onClick={() => setAbierto(false)} aria-current={act ? 'page' : undefined}
-                      className={`group flex items-center gap-2.5 rounded-md px-2 py-[7px] text-[14px] transition-colors ${act ? 'bg-white text-marino font-semibold' : 'text-marino-100 hover:bg-white/10'} ${n.fase ? 'opacity-75' : ''}`}>
-                      <I size={17} aria-hidden className={act ? 'text-clinico' : 'text-marino-300 group-hover:text-white'} />
+                      className={`group flex items-center gap-2.5 rounded-xl px-3 py-2 text-[14px] transition-colors ${act ? 'bg-marino-300 text-marino font-semibold' : 'text-marino-100 hover:bg-white/10'} ${n.fase ? 'opacity-75' : ''}`}>
+                      <I size={17} aria-hidden className={act ? 'text-marino' : 'text-marino-300 group-hover:text-white'} />
                       <span className="flex-1 truncate">{n.texto}</span>
-                      {n.fase && <span className={`rounded px-1.5 py-px font-mono text-[10px] ${act ? 'bg-clinico-claro text-clinico' : 'bg-white/10 text-marino-300'}`} title={`Se habilita en la Fase ${n.fase}`}>F{n.fase}</span>}
+                      {n.fase && <span className={`rounded px-1.5 py-px font-mono text-[10px] ${act ? 'bg-white/60 text-marino' : 'bg-white/10 text-marino-300'}`} title={`Se habilita en la Fase ${n.fase}`}>F{n.fase}</span>}
                     </Link>
                   </li>
                 );
@@ -58,27 +58,27 @@ export function Shell({ nav, institucion, siglas, tieneLogo, usuario, rol, fecha
           </div>
         ))}
       </div>
-      <div className="border-t border-white/10 px-5 py-4 text-[12px] leading-snug text-marino-300">
+      <div className="m-3 rounded-xl bg-white/[0.06] px-4 py-3 text-[12px] leading-snug text-marino-300">
         Sistema auxiliar del SIHO. No sustituye libros oficiales ni requisitos de COFEPRIS.
       </div>
     </nav>
   );
 
   return (
-    <div className="min-h-screen lg:grid lg:grid-cols-[248px_minmax(0,1fr)]">
-      <aside className="sticky top-0 hidden h-screen bg-marino text-white lg:block">{lateral}</aside>
+    <div className="min-h-screen lg:grid lg:grid-cols-[260px_minmax(0,1fr)] lg:gap-4 lg:p-4">
+      <aside className="sticky top-4 hidden h-[calc(100vh-2rem)] overflow-hidden rounded-3xl bg-marino text-white lg:block">{lateral}</aside>
       {abierto && (
         <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="Menú">
           <div className="absolute inset-0 bg-marino/50" onClick={() => setAbierto(false)} />
-          <aside className="absolute inset-y-0 left-0 w-[272px] max-w-[85vw] bg-marino text-white shadow-xl">
+          <aside className="absolute inset-y-0 left-0 w-[272px] max-w-[85vw] rounded-r-3xl bg-marino text-white shadow-xl">
             <button onClick={() => setAbierto(false)} className="absolute right-3 top-4 rounded p-1 text-marino-100 hover:bg-white/10" aria-label="Cerrar menú"><X size={20} /></button>
             {lateral}
           </aside>
         </div>
       )}
       <div className="flex min-w-0 flex-col">
-        <header className="sticky top-0 z-30 border-b border-linea bg-white/95 backdrop-blur">
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2.5 sm:px-6">
+        <header className="sticky top-0 z-30 bg-fondo px-3 pt-3 lg:-mt-4 lg:px-0 lg:pt-4">
+          <div className="tarjeta flex flex-wrap items-center gap-x-4 gap-y-2 rounded-3xl px-4 py-3 sm:px-5">
             <button className="rounded p-1.5 text-marino hover:bg-clinico-claro lg:hidden" onClick={() => setAbierto(true)} aria-label="Abrir menú"><Menu size={22} /></button>
             <div className="hidden min-w-0 flex-col leading-tight md:flex">
               <span className="truncate font-titulo text-[16px] font-semibold text-marino">{institucion}</span>
@@ -90,14 +90,14 @@ export function Shell({ nav, institucion, siglas, tieneLogo, usuario, rol, fecha
                 <span className="block text-[14px] font-medium">{usuario}</span>
                 <span className="block text-[12px] text-tenue">{rol}</span>
               </div>
-              <Link href="/cambiar-contrasena" className="grid h-9 w-9 place-items-center rounded-full bg-clinico-claro font-titulo text-[14px] font-semibold text-clinico" title="Mi cuenta: cambiar contraseña">
+              <Link href="/cambiar-contrasena" className="grid h-10 w-10 place-items-center rounded-full bg-marino-300 font-titulo text-[14px] font-semibold text-clinico" title="Mi cuenta: cambiar contraseña">
                 {usuario.split(' ').map((p) => p[0]).slice(0, 2).join('')}
               </Link>
               <form action={salir}><button className="btn-fantasma btn-chico" title="Cerrar sesión"><LogOut size={16} aria-hidden /><span className="hidden sm:inline">Salir</span></button></form>
             </div>
           </div>
         </header>
-        <main className="flex-1 px-4 pb-16 pt-6 sm:px-6">{children}</main>
+        <main className="flex-1 px-3 pb-16 pt-5 sm:px-4 lg:px-1">{children}</main>
       </div>
     </div>
   );
