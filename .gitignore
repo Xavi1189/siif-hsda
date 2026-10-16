@@ -1,0 +1,9 @@
+node_modules
+.next
+.siif-local
+.env*
+!.env.example
+*.tsbuildinfo
+next-env.d.ts
+.vercel
+respaldos
