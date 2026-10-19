@@ -46,7 +46,7 @@ export default async function Catalogo({ searchParams }: { searchParams: Promise
   const enlaceGrupo = (g: string) => {
     const q = Object.fromEntries(Object.entries(filtros).filter(([key, v]) => v && key !== 'pagina' && key !== 'grupo')) as Record<string, string>;
     if (sp.grupo !== g) q.grupo = g;
-    return '/catalogo' + (Object.keys(q).length ? '?' + new URLSearchParams(q) : '') + '#productos';
+    return '/catalogo' + (Object.keys(q).length ? '?' + new URLSearchParams(q) : '') + '#lista';
   };
   const VISIBLES = 8;
   const activoOculto = porGrupo.findIndex((x) => x.g === sp.grupo) >= VISIBLES;
@@ -58,11 +58,11 @@ export default async function Catalogo({ searchParams }: { searchParams: Promise
         acciones={tienePermiso(u.rol, 'catalogo.editar') && <Link href="/catalogo/nuevo" className="btn-primario"><Plus size={16} aria-hidden />Nuevo producto</Link>} />
 
       <div className="mb-4 grid grid-cols-2 gap-3 xl:grid-cols-5 [&>*:first-child]:col-span-2 xl:[&>*:first-child]:col-span-1">
-        <Kpi icono={<Package size={22} />} rotulo="Productos activos" valor={num(k.total)} href="/catalogo#productos" />
-        <Kpi icono={<ShieldAlert size={22} />} tono="peligro" rotulo="Controlados" valor={num(k.controlados)} href="/catalogo?controlado=1#productos" />
-        <Kpi icono={<BadgeCheck size={22} />} tono="info" rotulo="Cuadro básico" valor={num(k.cuadro)} detalle={`${num(k.antibioticos)} con etiqueta de antibiótico`} href="/catalogo?cuadro_basico=1#productos" />
-        <Kpi icono={<ScanBarcode size={22} />} tono="exito" rotulo="Con código vinculado" valor={num(k.total - k.sin_codigo)} href="/catalogo?con_codigo=1#productos" />
-        <Kpi icono={<ScanBarcode size={22} />} tono="alerta" rotulo="Sin código de barras" valor={num(k.sin_codigo)} href="/catalogo?sin_codigo=1#productos" />
+        <Kpi icono={<Package size={22} />} rotulo="Productos activos" valor={num(k.total)} href="/catalogo#lista" />
+        <Kpi icono={<ShieldAlert size={22} />} tono="peligro" rotulo="Controlados" valor={num(k.controlados)} href="/catalogo?controlado=1#lista" />
+        <Kpi icono={<BadgeCheck size={22} />} tono="info" rotulo="Cuadro básico" valor={num(k.cuadro)} detalle={`${num(k.antibioticos)} con etiqueta de antibiótico`} href="/catalogo?cuadro_basico=1#lista" />
+        <Kpi icono={<ScanBarcode size={22} />} tono="exito" rotulo="Con código vinculado" valor={num(k.total - k.sin_codigo)} href="/catalogo?con_codigo=1#lista" />
+        <Kpi icono={<ScanBarcode size={22} />} tono="alerta" rotulo="Sin código de barras" valor={num(k.sin_codigo)} href="/catalogo?sin_codigo=1#lista" />
       </div>
 
       {porGrupo.length > 0 && (
@@ -85,7 +85,7 @@ export default async function Catalogo({ searchParams }: { searchParams: Promise
       )}
 
       <div id="productos" className="tarjeta scroll-mt-28 overflow-hidden">
-        <form className="flex flex-wrap items-center gap-3 border-b border-[#ECE8E1] p-4" method="get">
+        <form key={JSON.stringify(sp)} className="flex flex-wrap items-center gap-3 border-b border-[#ECE8E1] p-4" method="get">
         <div className="min-w-[240px] flex-[2_1_280px]">
           <label htmlFor="q" className="sr-only">Buscar</label>
           <div className="relative">
@@ -108,7 +108,7 @@ export default async function Catalogo({ searchParams }: { searchParams: Promise
         </div>
       </form>
 
-        <div className="flex flex-wrap items-center justify-between gap-2 px-4 pb-1 pt-3 text-[13px] text-tenue">
+        <div id="lista" className="flex scroll-mt-28 flex-wrap items-center justify-between gap-2 px-4 pb-1 pt-3 text-[13px] text-tenue">
           <span><span className="font-semibold text-tinta">{num(r.total)}</span> productos{Object.values(sp).some(Boolean) && <> · <Link href="/catalogo" className="text-clinico hover:underline">Quitar filtros</Link></>}</span>
           <span>Página {r.pagina} de {r.paginas}</span>
         </div>
@@ -119,15 +119,38 @@ export default async function Catalogo({ searchParams }: { searchParams: Promise
               : 'Prueba con menos palabras o quita algún filtro.'}
           </Vacio>
         ) : (
-          <div className="overflow-x-auto px-3 pb-2">
+          <>
+          <ul className="flex flex-col gap-2 px-3 pb-3 md:hidden">
+            {r.filas.map((p) => (
+              <li key={p.id}>
+                <Link href={`/catalogo/${p.id}`} className="block rounded-xl border border-[#ECE8E1] px-3.5 py-3 active:bg-clinico-claro/50">
+                  <span className="flex items-baseline justify-between gap-3">
+                    <span className="font-mono text-[12px] text-clinico">{p.clave}</span>
+                    <span className="font-mono text-[13px] tabular-nums">{mxn(p.costo_unitario)}</span>
+                  </span>
+                  <span className="mt-0.5 block font-medium leading-snug">{p.descripcion}</span>
+                  <span className="mt-0.5 block text-[13px] text-tenue">{p.unidad_minima.toLowerCase()}{p.factor ? <> · {p.presentacion?.toLowerCase()} c/{p.factor}</> : null}{p.grupo_terapeutico && <> · {p.grupo_terapeutico}</>}</span>
+                  {(p.ubicaciones.length > 0) && <span className="mt-1 block text-[12px] text-tenue">{p.ubicaciones.map((x) => `${x.area} ${x.ubicacion ?? '—'}`).join(' · ')}</span>}
+                  <span className="mt-1.5 flex flex-wrap gap-1">
+                    {p.estatus !== 'activo' && <Insignia tono="neutro">{p.estatus === 'inactivo' ? 'Inactivo' : 'Descontinuado'}</Insignia>}
+                    {p.controlado && <Controlado grupo={p.grupo_controlado} />}
+                    {p.cuadro_basico && <Insignia tono="info">Cuadro básico</Insignia>}
+                    {p.etiquetas.map((e) => <EtiquetaProducto key={e.codigo} e={e} />)}
+                    {p.codigos ? <Insignia tono="exito">{p.codigos} código{p.codigos > 1 ? 's' : ''}</Insignia> : <Insignia tono="neutro">Sin código</Insignia>}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <div className="hidden overflow-x-auto px-3 pb-2 md:block">
             <table className="tabla min-w-[640px]">
               <thead><tr><th className="w-[1%]">Clave</th><th>Descripción</th><th className="w-[22%]">Ubicación SIHO</th><th className="num w-[1%] whitespace-nowrap">Costo</th><th className="w-[1%] whitespace-nowrap">Códigos</th></tr></thead>
               <tbody>
                 {r.filas.map((p) => (
-                  <tr key={p.id} className="relative">
-                    <td className="whitespace-nowrap font-mono text-[13px]"><Link href={`/catalogo/${p.id}`} className="text-clinico after:absolute after:inset-0 hover:underline">{p.clave}</Link></td>
+                  <tr key={p.id}>
+                    <td className="whitespace-nowrap font-mono text-[13px]"><Link href={`/catalogo/${p.id}`} className="text-clinico hover:underline">{p.clave}</Link></td>
                     <td>
-                      <span className="font-medium">{p.descripcion}</span>
+                      <Link href={`/catalogo/${p.id}`} className="font-medium hover:text-clinico hover:underline">{p.descripcion}</Link>
                       <span className="block text-[13px] text-tenue">{p.unidad_minima.toLowerCase()}{p.factor ? <> · {p.presentacion?.toLowerCase()} c/{p.factor}</> : null}{p.grupo_terapeutico && <> · {p.grupo_terapeutico}</>}</span>
                       <span className="mt-1 flex flex-wrap gap-1">
                         {p.estatus !== 'activo' && <Insignia tono="neutro">{p.estatus === 'inactivo' ? 'Inactivo' : 'Descontinuado'}</Insignia>}
@@ -147,6 +170,7 @@ export default async function Catalogo({ searchParams }: { searchParams: Promise
               </tbody>
             </table>
           </div>
+          </>
         )}
         {r.paginas > 1 && (
           <nav className="flex items-center justify-end gap-2 px-4 pb-4 pt-2" aria-label="Paginación">
