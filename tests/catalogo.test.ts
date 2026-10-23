@@ -137,6 +137,9 @@ describe('productos', () => {
     await db.tx((tx) => guardarProducto(tx, encargado, { ...base, clave: 'NUEVA-01', descripcion: 'Medicamento nuevo sin clave A' }, a1));
     expect((await obtenerProducto(db, a1))!.producto.clave).toBe('NUEVA-01');
     expect((await buscarPorCodigo(db, 'NUEVA-01')).encontrado?.producto.id).toBe(a1);
+    // Quitar una clave provisional (producto sin movimientos) deja el producto sin clave
+    await db.tx((tx) => guardarProducto(tx, encargado, { ...base, clave: '', descripcion: 'Medicamento nuevo sin clave A' }, a1));
+    expect((await obtenerProducto(db, a1))!.producto.clave).toBeNull();
   });
   it('cambia la unidad mínima (sin movimientos) y renombra su presentación', async () => {
     const id = (await db.query<{ id: number }>(`SELECT id FROM productos WHERE clave = '1010407211'`)).rows[0].id;
