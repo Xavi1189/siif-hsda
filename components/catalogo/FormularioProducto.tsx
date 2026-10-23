@@ -19,12 +19,17 @@ const VACIO: DatosFormulario = {
   cuadro_basico: false, costo_unitario: '0', requiere_lote: true, requiere_caducidad: true, estatus: 'activo',
 };
 
-export function FormularioProducto({ id, inicial, editable }: { id: number | null; inicial?: DatosFormulario; editable: boolean }) {
+export function FormularioProducto({ id, inicial, editable, unidadesEnUso = [] }: { id: number | null; inicial?: DatosFormulario; editable: boolean; unidadesEnUso?: string[] }) {
   const router = useRouter();
   const [d, setD] = useState<DatosFormulario>({ ...VACIO, ...inicial });
   const { pendiente, estado, ejecutar } = useAccion();
   const err = (k: string) => estado?.campos?.[k];
   const set = (k: string, v: string | boolean | null) => setD((x) => ({ ...x, [k]: v }));
+  // Unidad mínima: lista de unidades dispensables + las que ya existen en el catálogo (p. ej. las del SIHO)
+  const otrasUnidades = [...new Set(unidadesEnUso.map((u) => u.toUpperCase()))].filter((u) => !UNIDADES.includes(u)).sort((a, b) => a.localeCompare(b, 'es'));
+  const unidadActual = String(d.unidad_minima ?? '').toUpperCase();
+  const [escribirUnidad, setEscribirUnidad] = useState(false);
+  const unidadEnLista = UNIDADES.includes(unidadActual) || otrasUnidades.includes(unidadActual);
   const txt = (k: string, rotulo: string, { className: envoltura, ...props }: React.InputHTMLAttributes<HTMLInputElement> = {}) => (
     <div className={envoltura}>
       <label htmlFor={`p-${k}`} className="etiqueta-campo">{rotulo}</label>
@@ -69,10 +74,32 @@ export function FormularioProducto({ id, inicial, editable }: { id: number | nul
         <legend className="rotulo mb-2">Presentación y unidad</legend>
         {txt('concentracion', 'Concentración')}
         {txt('forma_farmaceutica', 'Forma farmacéutica')}
-        {txt('unidad_minima', 'Unidad mínima dispensable', { required: true, placeholder: 'Elige o escribe', list: 'unidades-minimas' })}
-        <datalist id="unidades-minimas">
-          {UNIDADES.map((u) => <option key={u} value={u} />)}
-        </datalist>
+        <div>
+          <label htmlFor="p-unidad_minima" className="etiqueta-campo">Unidad mínima dispensable</label>
+          {escribirUnidad ? (
+            <div className="flex gap-2">
+              <input id="p-unidad_minima" className={`campo ${err('unidad_minima') ? 'campo-error' : ''}`} value={String(d.unidad_minima ?? '')} autoFocus required
+                placeholder="Escribe la unidad" disabled={!editable} onChange={(e) => set('unidad_minima', e.target.value.toUpperCase())} />
+              <button type="button" className="btn-fantasma btn-chico" onClick={() => setEscribirUnidad(false)}>Lista</button>
+            </div>
+          ) : (
+            <select id="p-unidad_minima" className={`campo ${err('unidad_minima') ? 'campo-error' : ''}`} value={unidadActual} required disabled={!editable}
+              onChange={(e) => { if (e.target.value === '__otra') { setEscribirUnidad(true); set('unidad_minima', ''); } else set('unidad_minima', e.target.value); }}>
+              <option value="">Elige la unidad…</option>
+              {unidadActual && !unidadEnLista && <option value={unidadActual}>{unidadActual}</option>}
+              <optgroup label="Unidades dispensables">
+                {UNIDADES.map((u) => <option key={u} value={u}>{u}</option>)}
+              </optgroup>
+              {otrasUnidades.length > 0 && (
+                <optgroup label="Otras unidades en el catálogo">
+                  {otrasUnidades.map((u) => <option key={u} value={u}>{u}</option>)}
+                </optgroup>
+              )}
+              <option value="__otra">Otra (escribir)…</option>
+            </select>
+          )}
+          {err('unidad_minima') && <p className="mt-1 text-[12px] text-peligro">{err('unidad_minima')}</p>}
+        </div>
       </fieldset>
 
       <fieldset className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" disabled={!editable || pendiente}>

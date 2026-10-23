@@ -22,10 +22,12 @@ export default async function Producto({ params }: { params: Promise<{ id: strin
   const u = await exigirUsuario('catalogo.ver');
   const id = Number((await params).id);
   if (!Number.isInteger(id) || id <= 0) notFound();
-  const d = await obtenerProducto(await db(), id);
+  const conn = await db();
+  const d = await obtenerProducto(conn, id);
   if (!d) notFound();
   const p = d.producto as Record<string, string | boolean | null> & { id: number; clave: string; descripcion: string; unidad_minima: string };
   const editable = tienePermiso(u.rol, 'catalogo.editar');
+  const unidades = (await conn.query<{ u: string }>('SELECT DISTINCT unidad_minima u FROM productos ORDER BY 1')).rows.map((x) => x.u);
   const etiquetasActivas = d.etiquetas.filter((e) => e.asignada);
   const puedeVincular = tienePermiso(u.rol, 'codigos.vincular') ? 'directo' : tienePermiso(u.rol, 'codigos.proponer') ? 'propuesta' : null;
 
@@ -51,7 +53,7 @@ export default async function Producto({ params }: { params: Promise<{ id: strin
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
         <div className="flex min-w-0 flex-col gap-5">
           <Seccion titulo="Datos del producto" descripcion={editable ? 'Cada cambio queda registrado con usuario, fecha y valores anterior y nuevo.' : 'Solo lectura para tu rol.'}>
-            <FormularioProducto id={p.id} editable={editable}
+            <FormularioProducto id={p.id} editable={editable} unidadesEnUso={unidades}
               inicial={Object.fromEntries(Object.entries(p).map(([k, v]) => [k, v == null ? '' : typeof v === 'boolean' ? v : String(v)]))} />
           </Seccion>
           <Seccion titulo="Códigos de barras" descripcion="Un código identifica una presentación. Una caja (EAN/GTIN) normalmente NO trae lote ni caducidad; esos datos se capturan al recibir.">

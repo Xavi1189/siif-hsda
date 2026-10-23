@@ -126,6 +126,15 @@ describe('productos', () => {
     const codigos = (await obtenerProducto(db, id))!.etiquetas.map((e) => e.codigo);
     expect(codigos).toEqual(['LASA', 'ALTO_RIESGO', 'CADENA_FRIA', 'ANTIBIOTICO']);
   });
+  it('cambia la unidad mínima (sin movimientos) y renombra su presentación', async () => {
+    const id = (await db.query<{ id: number }>(`SELECT id FROM productos WHERE clave = '1010407211'`)).rows[0].id;
+    const p = (await obtenerProducto(db, id))!.producto as Record<string, unknown>;
+    const datos = Object.fromEntries(Object.entries(p).map(([k, v]) => [k, v == null ? '' : v]));
+    await db.tx((tx) => guardarProducto(tx, encargado, { ...datos, unidad_minima: 'ampula' }, id));
+    const d = (await obtenerProducto(db, id))!;
+    expect(d.producto.unidad_minima).toBe('AMPULA');
+    expect(d.presentaciones.filter((x) => x.es_unidad).map((x) => x.nombre)).toEqual(['AMPULA']);
+  });
   it('valida factores de presentación explícitos', async () => {
     const id = (await db.query<{ id: number }>(`SELECT id FROM productos WHERE clave = 'X100'`)).rows[0].id;
     await expect(agregarPresentacion(db, encargado, id, 'caja', 2.5)).rejects.toThrow(/entero/);

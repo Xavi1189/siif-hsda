@@ -185,7 +185,7 @@ export async function guardarProducto(tx: Tx, a: Actor, entrada: unknown, id?: n
     `UPDATE productos SET ${CAMPOS.map((c, i) => `${c} = $${i + 1}`).join(', ')}, actualizado = now(), actualizado_por = $${CAMPOS.length + 1}
       WHERE id = $${CAMPOS.length + 2}`, [...valores, a.id, id]);
   if (cambios.unidad_minima) {
-    await tx.query(`UPDATE presentaciones SET nombre = $2 WHERE producto_id = $1 AND es_unidad`, [id, d.unidad_minima, antes.unidad_minima]);
+    await tx.query(`UPDATE presentaciones SET nombre = $2 WHERE producto_id = $1 AND es_unidad`, [id, d.unidad_minima]);
   }
   await auditar(tx, { usuarioId: a.id, accion: 'producto.editar', entidad: 'producto', entidadId: id, detalle: { cambios }, ip: a.ip });
   return id;
