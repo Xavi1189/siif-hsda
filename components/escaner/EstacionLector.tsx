@@ -38,7 +38,7 @@ export function EstacionLector({ ventanaMs, sonidoPredeterminado, puedeVincular,
       setDestello((x) => x + 1);
       const e = r.datos.encontrado;
       if (e) {
-        registrar(codigo, e.verificado ? 'encontrado' : 'sin-verificar', `${e.producto.clave} · ${e.producto.descripcion}`);
+        registrar(codigo, e.verificado ? 'encontrado' : 'sin-verificar', `${e.producto.clave ?? 'Sin clave'} · ${e.producto.descripcion}`);
         if (sonido && desdePistola) sonar(e.verificado && !e.etiquetas.length ? 'ok' : 'aviso');
       } else {
         registrar(codigo, 'desconocido', 'Código no vinculado');
@@ -147,7 +147,7 @@ function Encontrado({ r }: { r: ResultadoLectura }) {
     <div>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="font-mono text-[13px] text-tenue">{e.producto.clave} · {e.via === 'clave' ? 'clave interna' : `código ${r.lectura.normalizado}`}</p>
+          <p className="font-mono text-[13px] text-tenue">{e.producto.clave ?? 'Sin clave SIHO'} · {e.via === 'clave' ? 'clave interna' : `código ${r.lectura.normalizado}`}</p>
           <h2 className="mt-0.5 text-[24px] font-bold leading-tight text-marino">{e.producto.descripcion}</h2>
         </div>
         {e.verificado ? <Insignia tono="exito" icono={<BadgeCheck size={12} aria-hidden />}>Vínculo verificado</Insignia> : <Insignia tono="alerta">Vínculo por verificar</Insignia>}
@@ -210,7 +210,7 @@ function Desconocido({ r, puedeVincular, alVincular }: { r: ResultadoLectura; pu
                   {lista.map((p) => (
                     <li key={p.id}><button type="button" className="flex w-full gap-3 px-3 py-2 text-left hover:bg-clinico-claro focus:bg-clinico-claro"
                       onClick={() => { setElegido(p); const def = p.presentaciones.find((x) => !x.es_unidad) ?? p.presentaciones[0]; setPres(String(def?.id ?? '')); }}>
-                      <span className="font-mono text-[13px] text-tenue">{p.clave}</span><span className="text-[14px]">{p.descripcion}</span>
+                      <span className="font-mono text-[13px] text-tenue">{p.clave ?? 'Sin clave'}</span><span className="text-[14px]">{p.descripcion}</span>
                     </button></li>
                   ))}
                 </ul>
@@ -225,7 +225,7 @@ function Desconocido({ r, puedeVincular, alVincular }: { r: ResultadoLectura; pu
               else if (!res.ok) setMsg({ tono: 'peligro', texto: res.error });
               else { sonar('ok'); alVincular(r.lectura.original); }
             }}>
-              <p className="text-[14px]"><span className="font-mono text-tenue">{elegido.clave}</span> · <span className="font-medium">{elegido.descripcion}</span></p>
+              <p className="text-[14px]"><span className="font-mono text-tenue">{elegido.clave ?? 'Sin clave'}</span> · <span className="font-medium">{elegido.descripcion}</span></p>
               <div>
                 <label htmlFor="pres-vincular" className="etiqueta-campo">El código está impreso en</label>
                 <select id="pres-vincular" className="campo" value={pres} onChange={(e) => setPres(e.target.value)}>

@@ -51,7 +51,7 @@ export function FormularioProducto({ id, inicial, editable, unidadesEnUso = [] }
       {estado && <Aviso tono={estado.tono}>{estado.texto}</Aviso>}
       <fieldset className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" disabled={!editable || pendiente}>
         <legend className="rotulo mb-2">Identificación</legend>
-        {txt('clave', 'Clave interna (SIHO)', { required: true, className: 'lg:col-span-1', spellCheck: false })}
+        {txt('clave', 'Clave interna (SIHO)', { className: 'lg:col-span-1', spellCheck: false, placeholder: 'En blanco si aún no tiene' })}
         <div>
           <label htmlFor="p-tipo" className="etiqueta-campo">Tipo</label>
           <select id="p-tipo" className="campo" value={String(d.tipo)} onChange={(e) => set('tipo', e.target.value)}>

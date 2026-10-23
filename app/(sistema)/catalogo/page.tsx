@@ -30,7 +30,7 @@ export default async function Catalogo({ searchParams }: { searchParams: Promise
   const c = await db();
   const r = await buscarProductos(c, {
     q: sp.q, grupo: sp.grupo, tipo: sp.tipo, estatus: sp.estatus, etiqueta: sp.etiqueta, area: sp.area,
-    sinCodigo: sp.sin_codigo === '1', conCodigo: sp.con_codigo === '1', controlado: sp.controlado === '1', cuadroBasico: sp.cuadro_basico === '1', antibiotico: sp.antibiotico === '1', pagina: Number(sp.pagina) || 1,
+    sinCodigo: sp.sin_codigo === '1', conCodigo: sp.con_codigo === '1', sinClave: sp.sin_clave === '1', controlado: sp.controlado === '1', cuadroBasico: sp.cuadro_basico === '1', antibiotico: sp.antibiotico === '1', pagina: Number(sp.pagina) || 1,
   });
   const etiquetas = (await c.query<{ codigo: string; nombre: string }>('SELECT codigo, nombre FROM etiquetas WHERE activa ORDER BY id')).rows;
   const porGrupo = (await c.query<{ g: string; n: number }>(
@@ -51,7 +51,7 @@ export default async function Catalogo({ searchParams }: { searchParams: Promise
   const VISIBLES = 8;
   // Con una búsqueda escrita se muestran solo los resultados (sin resumen ni grupos)
   const buscando = !!sp.q?.trim();
-  const filtrosExtra = ['area', 'grupo', 'tipo', 'etiqueta', 'estatus', 'sin_codigo', 'con_codigo', 'controlado', 'cuadro_basico', 'antibiotico'].filter((x) => sp[x]).length;
+  const filtrosExtra = ['area', 'grupo', 'tipo', 'etiqueta', 'estatus', 'sin_codigo', 'con_codigo', 'controlado', 'cuadro_basico', 'antibiotico', 'sin_clave'].filter((x) => sp[x]).length;
   const activoOculto = porGrupo.findIndex((x) => x.g === sp.grupo) >= VISIBLES;
   const enlace = (pagina: number) => '/catalogo?' + new URLSearchParams({ ...Object.fromEntries(Object.entries(filtros).filter(([, v]) => v)) as Record<string, string>, pagina: String(pagina) });
 
@@ -108,7 +108,7 @@ export default async function Catalogo({ searchParams }: { searchParams: Promise
           <button className="btn-primario btn-chico ml-auto"><Search size={14} aria-hidden />Buscar</button>
         </div>
         <input type="checkbox" id="mas-filtros" className="peer sr-only" defaultChecked={filtrosExtra > 0} />
-        <div className="hidden w-full flex-col gap-3 peer-checked:flex md:contents">
+        <div className="hidden w-full gap-3 peer-checked:grid md:!contents">
         <Seleccion nombre="area" valor={sp.area} rotulo="Área" opciones={[['', 'Ambas farmacias'], ['HOSP', 'Hospitalaria'], ['URG', 'Urgencias']]} />
         <Seleccion nombre="grupo" valor={sp.grupo} rotulo="Grupo terapéutico" opciones={[['', 'Todos los grupos terapéuticos'], ...grupos.map((g) => [g, g] as [string, string])]} />
         <Seleccion nombre="tipo" valor={sp.tipo} rotulo="Tipo" opciones={[['', 'Todos los tipos'], ...Object.entries(TIPOS)]} />
@@ -120,6 +120,7 @@ export default async function Catalogo({ searchParams }: { searchParams: Promise
           <label className="flex items-center gap-1.5 text-[13px] text-tenue"><input type="checkbox" name="controlado" value="1" defaultChecked={sp.controlado === '1'} className="h-4 w-4 accent-clinico" />Controlados</label>
           <label className="flex items-center gap-1.5 text-[13px] text-tenue"><input type="checkbox" name="cuadro_basico" value="1" defaultChecked={sp.cuadro_basico === '1'} className="h-4 w-4 accent-clinico" />Cuadro básico</label>
           <label className="flex items-center gap-1.5 text-[13px] text-tenue"><input type="checkbox" name="antibiotico" value="1" defaultChecked={sp.antibiotico === '1'} className="h-4 w-4 accent-clinico" />Antibióticos</label>
+          <label className="flex items-center gap-1.5 text-[13px] text-tenue"><input type="checkbox" name="sin_clave" value="1" defaultChecked={sp.sin_clave === '1'} className="h-4 w-4 accent-clinico" />Sin clave SIHO</label>
           <button className="btn-primario">Filtrar</button>
         </div>
         </div>
@@ -142,7 +143,7 @@ export default async function Catalogo({ searchParams }: { searchParams: Promise
               <li key={p.id}>
                 <Link href={`/catalogo/${p.id}`} className="block rounded-xl border border-[#ECE8E1] px-3.5 py-3 active:bg-clinico-claro/50">
                   <span className="flex items-baseline justify-between gap-3">
-                    <span className="font-mono text-[12px] text-clinico">{p.clave}</span>
+                    <span className="font-mono text-[12px] text-clinico">{p.clave ?? <span className="font-sans italic text-tenue">Sin clave SIHO</span>}</span>
                     <span className="font-mono text-[13px] tabular-nums">{mxn(p.costo_unitario)}</span>
                   </span>
                   <span className="mt-0.5 block font-medium leading-snug">{p.descripcion}</span>
@@ -165,7 +166,7 @@ export default async function Catalogo({ searchParams }: { searchParams: Promise
               <tbody>
                 {r.filas.map((p) => (
                   <tr key={p.id}>
-                    <td className="whitespace-nowrap font-mono text-[13px]"><Link href={`/catalogo/${p.id}`} className="text-clinico hover:underline">{p.clave}</Link></td>
+                    <td className="whitespace-nowrap font-mono text-[13px]"><Link href={`/catalogo/${p.id}`} className="text-clinico hover:underline">{p.clave ?? <span className="font-sans italic text-tenue">Sin clave SIHO</span>}</Link></td>
                     <td>
                       <Link href={`/catalogo/${p.id}`} className="font-medium hover:text-clinico hover:underline">{p.descripcion}</Link>
                       <span className="block text-[13px] text-tenue">{p.unidad_minima.toLowerCase()}{p.factor ? <> · {p.presentacion?.toLowerCase()} c/{p.factor}</> : null}{p.grupo_terapeutico && <> · {p.grupo_terapeutico}</>}</span>

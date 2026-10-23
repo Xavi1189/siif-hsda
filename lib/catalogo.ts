@@ -20,10 +20,10 @@ function exigir(a: Actor, p: Parameters<typeof tienePermiso>[1]) {
 // ---------------------------------------------------------------------------
 export interface FiltroCatalogo {
   q?: string; tipo?: string; estatus?: string; etiqueta?: string; area?: string; grupo?: string;
-  sinCodigo?: boolean; conCodigo?: boolean; controlado?: boolean; cuadroBasico?: boolean; antibiotico?: boolean; pagina?: number; porPagina?: number;
+  sinCodigo?: boolean; conCodigo?: boolean; sinClave?: boolean; controlado?: boolean; cuadroBasico?: boolean; antibiotico?: boolean; pagina?: number; porPagina?: number;
 }
 export interface FilaCatalogo {
-  id: number; clave: string; descripcion: string; tipo: string; unidad_minima: string; estatus: string;
+  id: number; clave: string | null; descripcion: string; tipo: string; unidad_minima: string; estatus: string;
   costo_unitario: string; controlado: boolean; grupo_controlado: string | null; cuadro_basico: boolean; grupo_terapeutico: string | null;
   presentacion: string | null; factor: number | null; codigos: number; codigos_sin_verificar: number;
   etiquetas: { codigo: string; nombre: string; icono: string; tono: string }[];
@@ -44,6 +44,7 @@ export async function buscarProductos(tx: Tx, f: FiltroCatalogo): Promise<{ fila
   if (f.estatus) { p.push(f.estatus); cond.push(`pr.estatus = $${p.length}::estatus_producto`); }
   if (f.controlado) cond.push('pr.controlado');
   if (f.cuadroBasico) cond.push('pr.cuadro_basico');
+  if (f.sinClave) cond.push('pr.clave IS NULL');
   if (f.grupo) { p.push(f.grupo); cond.push(`pr.grupo_terapeutico = $${p.length}`); }
   if (f.antibiotico) cond.push(`EXISTS (SELECT 1 FROM producto_etiquetas pe JOIN etiquetas e ON e.id = pe.etiqueta_id WHERE pe.producto_id = pr.id AND e.codigo = 'ANTIBIOTICO')`);
   if (f.sinCodigo) cond.push('NOT EXISTS (SELECT 1 FROM codigos_barras cb WHERE cb.producto_id = pr.id AND cb.activo)');
@@ -80,7 +81,7 @@ export async function buscarProductos(tx: Tx, f: FiltroCatalogo): Promise<{ fila
 }
 
 export interface ProductoDetalle {
-  producto: Record<string, unknown> & { id: number; clave: string; descripcion: string; unidad_minima: string };
+  producto: Record<string, unknown> & { id: number; clave: string | null; descripcion: string; unidad_minima: string };
   presentaciones: { id: number; nombre: string; factor: number; activa: boolean; es_unidad: boolean }[];
   codigos: { id: number; codigo: string; tipo: string; verificado: boolean; presentacion: string; factor: number; es_unidad: boolean; creado: string; creado_por: string | null; verificado_por: string | null }[];
   etiquetas: { id: number; codigo: string; nombre: string; icono: string; tono: string; advertencia: string | null; asignada: boolean }[];
@@ -132,7 +133,9 @@ export async function obtenerProducto(tx: Tx, id: number): Promise<ProductoDetal
 const texto = (max: number) => z.string().trim().max(max).transform((s) => (s === '' ? null : s)).nullable().optional();
 
 export const esquemaProducto = z.object({
-  clave: z.string().trim().regex(/^[A-Za-z0-9._-]{1,30}$/, 'La clave solo admite letras, números, punto, guion y guion bajo (máx. 30).'),
+  // Opcional: un medicamento nuevo puede no tener clave en el SIHO todavía
+  clave: z.string().trim().nullable().optional().transform((s) => (s ? s : null))
+    .refine((s) => s === null || /^[A-Za-z0-9._-]{1,30}$/.test(s), 'La clave solo admite letras, números, punto, guion y guion bajo (máx. 30).'),
   tipo: z.enum(['medicamento', 'dispositivo_medico', 'insumo']),
   descripcion: z.string().trim().min(3, 'La descripción es obligatoria.').max(250).transform((s) => s.toUpperCase()),
   nombre_generico: texto(150), nombre_comercial: texto(150), concentracion: texto(80),
@@ -157,8 +160,10 @@ export async function guardarProducto(tx: Tx, a: Actor, entrada: unknown, id?: n
   const valores = CAMPOS.map((c) => (d as Record<string, unknown>)[c] ?? null);
   // Controlado y grupo no se editan aquí: solo con cambiarControlado (permiso de etiquetas sensibles)
   if (id == null) {
-    const dup = await tx.query('SELECT 1 FROM productos WHERE clave = $1', [d.clave]);
-    if (dup.rows.length) throw new ErrorNegocio(`Ya existe un producto con la clave ${d.clave}.`);
+    if (d.clave) {
+      const dup = await tx.query('SELECT 1 FROM productos WHERE clave = $1', [d.clave]);
+      if (dup.rows.length) throw new ErrorNegocio(`Ya existe un producto con la clave ${d.clave}.`);
+    }
     const r = await tx.query<{ id: number }>(
       `INSERT INTO productos (${CAMPOS.join(', ')}, actualizado_por)
        VALUES (${CAMPOS.map((_, i) => `$${i + 1}`).join(', ')}, $${CAMPOS.length + 1}) RETURNING id`, [...valores, a.id]);
@@ -169,11 +174,16 @@ export async function guardarProducto(tx: Tx, a: Actor, entrada: unknown, id?: n
   }
   const antes = (await tx.query<Record<string, unknown>>(`SELECT ${CAMPOS.join(', ')} FROM productos WHERE id = $1 FOR UPDATE`, [id])).rows[0];
   if (!antes) throw new ErrorNegocio('El producto no existe.');
-  if (antes.clave !== d.clave) {
-    const usado = await tx.query('SELECT 1 FROM movimientos WHERE producto_id = $1 LIMIT 1', [id]);
-    if (usado.rows.length) throw new ErrorNegocio('La clave no se puede cambiar porque el producto ya tiene movimientos.');
-    const dup = await tx.query('SELECT 1 FROM productos WHERE clave = $1 AND id <> $2', [d.clave, id]);
-    if (dup.rows.length) throw new ErrorNegocio(`Ya existe un producto con la clave ${d.clave}.`);
+  if ((antes.clave ?? null) !== d.clave) {
+    // Asignar la clave a un producto que no la tenía siempre se permite; cambiar o quitar una existente, solo sin movimientos
+    if (antes.clave) {
+      const usado = await tx.query('SELECT 1 FROM movimientos WHERE producto_id = $1 LIMIT 1', [id]);
+      if (usado.rows.length) throw new ErrorNegocio('La clave no se puede cambiar porque el producto ya tiene movimientos.');
+    }
+    if (d.clave) {
+      const dup = await tx.query('SELECT 1 FROM productos WHERE clave = $1 AND id <> $2', [d.clave, id]);
+      if (dup.rows.length) throw new ErrorNegocio(`Ya existe un producto con la clave ${d.clave}.`);
+    }
   }
   if (antes.unidad_minima !== d.unidad_minima) {
     const usado = await tx.query('SELECT 1 FROM movimientos WHERE producto_id = $1 LIMIT 1', [id]);
@@ -286,7 +296,7 @@ export interface ResultadoLectura {
     via: 'codigo' | 'clave';
     codigoId?: number;
     verificado: boolean;
-    producto: { id: number; clave: string; descripcion: string; unidad_minima: string; estatus: string; controlado: boolean };
+    producto: { id: number; clave: string | null; descripcion: string; unidad_minima: string; estatus: string; controlado: boolean };
     presentacion: { id: number; nombre: string; factor: number; es_unidad: boolean };
     etiquetas: { codigo: string; nombre: string; icono: string; tono: string; advertencia: string | null }[];
   };
@@ -322,11 +332,11 @@ export async function vincularCodigo(tx: Tx, a: Actor, entrada: string, producto
   if (lectura.tipo === 'OTRO') throw new ErrorNegocio('El código tiene caracteres no válidos. Revisa la configuración de teclado del lector y vuelve a escanear.');
   const pres = (await tx.query<{ producto_id: number; activa: boolean }>('SELECT producto_id, activa FROM presentaciones WHERE id = $1', [presentacionId])).rows[0];
   if (!pres || pres.producto_id !== productoId || !pres.activa) throw new ErrorNegocio('La presentación no corresponde al producto.');
-  const prod = (await tx.query<{ clave: string }>('SELECT clave FROM productos WHERE id = $1', [productoId])).rows[0];
-  if (prod && prod.clave.toUpperCase() === lectura.normalizado) throw new ErrorNegocio('Ese texto es la clave del producto; no hace falta vincularla como código.');
-  const ya = (await tx.query<{ clave: string; descripcion: string }>(
+  const prod = (await tx.query<{ clave: string | null }>('SELECT clave FROM productos WHERE id = $1', [productoId])).rows[0];
+  if (prod?.clave && prod.clave.toUpperCase() === lectura.normalizado) throw new ErrorNegocio('Ese texto es la clave del producto; no hace falta vincularla como código.');
+  const ya = (await tx.query<{ clave: string | null; descripcion: string }>(
     `SELECT p.clave, p.descripcion FROM codigos_barras cb JOIN productos p ON p.id = cb.producto_id WHERE cb.codigo = $1 AND cb.activo`, [lectura.normalizado])).rows[0];
-  if (ya) throw new ErrorNegocio(`Este código ya está vinculado a ${ya.clave} · ${ya.descripcion}.`);
+  if (ya) throw new ErrorNegocio(`Este código ya está vinculado a ${ya.clave ?? 'un producto sin clave SIHO'} · ${ya.descripcion}.`);
   const r = await tx.query<{ id: number }>(
     `INSERT INTO codigos_barras (codigo, producto_id, presentacion_id, tipo, verificado, creado_por, verificado_por, verificado_en)
      VALUES ($1, $2, $3, $4, $5, $6, CASE WHEN $5 THEN $6::uuid END, CASE WHEN $5 THEN now() END) RETURNING id`,
@@ -359,7 +369,7 @@ export async function sugerirProductos(tx: Tx, q: string, limite = 15) {
   if (!terminos.length) return [];
   const p = terminos.map((t) => '%' + t.replace(/[%_\\]/g, '\\$&') + '%');
   const where = p.map((_, i) => `busqueda LIKE $${i + 1}`).join(' AND ');
-  return (await tx.query<{ id: number; clave: string; descripcion: string; unidad_minima: string; presentaciones: { id: number; nombre: string; factor: number; es_unidad: boolean }[] }>(
+  return (await tx.query<{ id: number; clave: string | null; descripcion: string; unidad_minima: string; presentaciones: { id: number; nombre: string; factor: number; es_unidad: boolean }[] }>(
     `SELECT pr.id, pr.clave, pr.descripcion, pr.unidad_minima,
             (SELECT json_agg(json_build_object('id', ps.id, 'nombre', ps.nombre, 'factor', ps.factor, 'es_unidad', ps.es_unidad) ORDER BY ps.es_unidad DESC, ps.factor)
                FROM presentaciones ps WHERE ps.producto_id = pr.id AND ps.activa) AS presentaciones

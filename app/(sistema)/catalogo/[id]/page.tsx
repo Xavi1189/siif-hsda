@@ -14,8 +14,8 @@ import { Codigos, Etiquetas, ParametrosArea, Presentaciones } from '@/components
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const id = Number((await params).id);
   if (!Number.isInteger(id)) return { title: 'Producto' };
-  const r = await (await db()).query<{ clave: string }>('SELECT clave FROM productos WHERE id = $1', [id]);
-  return { title: r.rows[0]?.clave ?? 'Producto' };
+  const r = await (await db()).query<{ clave: string | null; descripcion: string }>('SELECT clave, descripcion FROM productos WHERE id = $1', [id]);
+  return { title: r.rows[0]?.clave ?? r.rows[0]?.descripcion ?? 'Producto' };
 }
 
 export default async function Producto({ params }: { params: Promise<{ id: string }> }) {
@@ -25,7 +25,7 @@ export default async function Producto({ params }: { params: Promise<{ id: strin
   const conn = await db();
   const d = await obtenerProducto(conn, id);
   if (!d) notFound();
-  const p = d.producto as Record<string, string | boolean | null> & { id: number; clave: string; descripcion: string; unidad_minima: string };
+  const p = d.producto as Record<string, string | boolean | null> & { id: number; clave: string | null; descripcion: string; unidad_minima: string };
   const editable = tienePermiso(u.rol, 'catalogo.editar');
   const unidades = (await conn.query<{ u: string }>('SELECT DISTINCT unidad_minima u FROM productos ORDER BY 1')).rows.map((x) => x.u);
   const etiquetasActivas = d.etiquetas.filter((e) => e.asignada);
@@ -33,10 +33,10 @@ export default async function Producto({ params }: { params: Promise<{ id: strin
 
   return (
     <>
-      <Encabezado migas={<><Link href="/catalogo" className="hover:text-clinico hover:underline">Catálogo</Link> / <span className="font-mono">{p.clave}</span></>}
+      <Encabezado migas={<><Link href="/catalogo" className="hover:text-clinico hover:underline">Catálogo</Link> / <span className="font-mono">{p.clave ?? 'Sin clave'}</span></>}
         titulo={p.descripcion}
         descripcion={<span className="flex flex-wrap items-center gap-1.5">
-          <span className="font-mono">{p.clave}</span> · {mxn(p.costo_unitario as string)} por {p.unidad_minima.toLowerCase()}
+          {p.clave ? <span className="font-mono">{p.clave}</span> : <Insignia tono="alerta">Sin clave SIHO</Insignia>} · {mxn(p.costo_unitario as string)} por {p.unidad_minima.toLowerCase()}
           {p.estatus !== 'activo' && <Insignia>{p.estatus === 'inactivo' ? 'Inactivo' : 'Descontinuado'}</Insignia>}
           {p.controlado && <Controlado grupo={p.grupo_controlado as string | null} />}
           {etiquetasActivas.map((e) => <EtiquetaProducto key={e.id} e={e} />)}

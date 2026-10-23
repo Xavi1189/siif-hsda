@@ -126,6 +126,18 @@ describe('productos', () => {
     const codigos = (await obtenerProducto(db, id))!.etiquetas.map((e) => e.codigo);
     expect(codigos).toEqual(['LASA', 'ALTO_RIESGO', 'CADENA_FRIA', 'ANTIBIOTICO']);
   });
+  it('permite productos sin clave SIHO y asignarla después', async () => {
+    const a1 = await db.tx((tx) => guardarProducto(tx, encargado, { ...base, clave: '', descripcion: 'Medicamento nuevo sin clave A' }));
+    const a2 = await db.tx((tx) => guardarProducto(tx, encargado, { ...base, clave: null, descripcion: 'Medicamento nuevo sin clave B' }));
+    expect((await obtenerProducto(db, a1))!.producto.clave).toBeNull();
+    const sin = await buscarProductos(db, { sinClave: true });
+    expect(sin.filas.map((f) => f.id).sort()).toEqual([a1, a2].sort());
+    expect((await buscarProductos(db, { q: 'nuevo sin clave' })).total).toBe(2); // la búsqueda funciona sin clave
+    await expect(db.tx((tx) => guardarProducto(tx, encargado, { ...base, clave: 'X100', descripcion: 'Medicamento nuevo sin clave A' }, a1))).rejects.toThrow(/Ya existe/);
+    await db.tx((tx) => guardarProducto(tx, encargado, { ...base, clave: 'NUEVA-01', descripcion: 'Medicamento nuevo sin clave A' }, a1));
+    expect((await obtenerProducto(db, a1))!.producto.clave).toBe('NUEVA-01');
+    expect((await buscarPorCodigo(db, 'NUEVA-01')).encontrado?.producto.id).toBe(a1);
+  });
   it('cambia la unidad mínima (sin movimientos) y renombra su presentación', async () => {
     const id = (await db.query<{ id: number }>(`SELECT id FROM productos WHERE clave = '1010407211'`)).rows[0].id;
     const p = (await obtenerProducto(db, id))!.producto as Record<string, unknown>;
@@ -174,7 +186,7 @@ describe('productos', () => {
     const r = await buscarProductos(db, { q: 'fenodid', porPagina: 10 });
     expect(r.filas[0].clave).toBe('1010100100');
     const t = await buscarProductos(db, { porPagina: 50, pagina: 2 });
-    expect(t.total).toBe(827);
+    expect(t.total).toBe(829); // 826 del SIHO + X100 + 2 sin clave
     expect(t.filas).toHaveLength(50);
     const c = await buscarProductos(db, { q: 'CONTROLADOS', area: 'HOSP' });
     expect(c.total).toBe(31);
