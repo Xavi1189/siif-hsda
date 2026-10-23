@@ -49,14 +49,20 @@ export default async function Catalogo({ searchParams }: { searchParams: Promise
     return '/catalogo' + (Object.keys(q).length ? '?' + new URLSearchParams(q) : '') + '#lista';
   };
   const VISIBLES = 8;
+  // Con una búsqueda escrita se muestran solo los resultados (sin resumen ni grupos)
+  const buscando = !!sp.q?.trim();
+  const filtrosExtra = ['area', 'grupo', 'tipo', 'etiqueta', 'estatus', 'sin_codigo', 'con_codigo', 'controlado', 'cuadro_basico', 'antibiotico'].filter((x) => sp[x]).length;
   const activoOculto = porGrupo.findIndex((x) => x.g === sp.grupo) >= VISIBLES;
   const enlace = (pagina: number) => '/catalogo?' + new URLSearchParams({ ...Object.fromEntries(Object.entries(filtros).filter(([, v]) => v)) as Record<string, string>, pagina: String(pagina) });
 
   return (
     <>
-      <Encabezado titulo="Catálogo" descripcion="Medicamentos, dispositivos médicos e insumos de ambas farmacias. Busca por clave, nombre, laboratorio, código de barras o localización del SIHO."
-        acciones={tienePermiso(u.rol, 'catalogo.editar') && <Link href="/catalogo/nuevo" className="btn-primario"><Plus size={16} aria-hidden />Nuevo producto</Link>} />
+      <Encabezado titulo={buscando ? `Resultados para “${sp.q!.trim()}”` : 'Catálogo'}
+        migas={buscando ? <Link href="/catalogo" className="inline-flex items-center gap-1 hover:text-clinico hover:underline"><ChevronLeft size={14} aria-hidden />Catálogo completo</Link> : undefined}
+        descripcion={buscando ? undefined : 'Medicamentos, dispositivos médicos e insumos de ambas farmacias. Busca por clave, nombre, laboratorio, código de barras o localización del SIHO.'}
+        acciones={tienePermiso(u.rol, 'catalogo.editar') && <Link href="/catalogo/nuevo" className={`btn-primario ${buscando ? 'hidden sm:inline-flex' : ''}`}><Plus size={16} aria-hidden />Nuevo producto</Link>} />
 
+      {!buscando && (<>
       <div className="mb-4 grid grid-cols-2 gap-3 xl:grid-cols-5 [&>*:first-child]:col-span-2 xl:[&>*:first-child]:col-span-1">
         <Kpi icono={<Package size={22} />} rotulo="Productos activos" valor={num(k.total)} href="/catalogo#lista" />
         <Kpi icono={<ShieldAlert size={22} />} tono="peligro" rotulo="Controlados" valor={num(k.controlados)} href="/catalogo?controlado=1#lista" />
@@ -83,6 +89,7 @@ export default async function Catalogo({ searchParams }: { searchParams: Promise
           )}
         </section>
       )}
+      </>)}
 
       <div id="productos" className="tarjeta scroll-mt-28 overflow-hidden">
         <form key={JSON.stringify(sp)} className="flex flex-wrap items-center gap-3 border-b border-[#ECE8E1] p-4" method="get">
@@ -90,9 +97,18 @@ export default async function Catalogo({ searchParams }: { searchParams: Promise
           <label htmlFor="q" className="sr-only">Buscar</label>
           <div className="relative">
             <Search size={16} aria-hidden className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-tenue" />
-            <input id="q" name="q" defaultValue={sp.q} className="campo rounded-full pl-10" placeholder="Clave, nombre, laboratorio, código o ubicación" />
+            <input id="q" name="q" type="search" enterKeyHint="search" defaultValue={sp.q} className="campo rounded-full pl-10" placeholder="Clave, nombre, laboratorio, código o ubicación" />
           </div>
         </div>
+        {/* En celular los filtros quedan plegados para que la búsqueda y sus resultados se vean primero */}
+        <div className="flex w-full items-center gap-2 md:hidden">
+          <label htmlFor="mas-filtros" className="btn-secundario btn-chico cursor-pointer">
+            <ChevronDown size={14} aria-hidden />Más filtros{filtrosExtra ? ` (${filtrosExtra})` : ''}
+          </label>
+          <button className="btn-primario btn-chico ml-auto"><Search size={14} aria-hidden />Buscar</button>
+        </div>
+        <input type="checkbox" id="mas-filtros" className="peer sr-only" defaultChecked={filtrosExtra > 0} />
+        <div className="hidden w-full flex-col gap-3 peer-checked:flex md:contents">
         <Seleccion nombre="area" valor={sp.area} rotulo="Área" opciones={[['', 'Ambas farmacias'], ['HOSP', 'Hospitalaria'], ['URG', 'Urgencias']]} />
         <Seleccion nombre="grupo" valor={sp.grupo} rotulo="Grupo terapéutico" opciones={[['', 'Todos los grupos terapéuticos'], ...grupos.map((g) => [g, g] as [string, string])]} />
         <Seleccion nombre="tipo" valor={sp.tipo} rotulo="Tipo" opciones={[['', 'Todos los tipos'], ...Object.entries(TIPOS)]} />
@@ -105,6 +121,7 @@ export default async function Catalogo({ searchParams }: { searchParams: Promise
           <label className="flex items-center gap-1.5 text-[13px] text-tenue"><input type="checkbox" name="cuadro_basico" value="1" defaultChecked={sp.cuadro_basico === '1'} className="h-4 w-4 accent-clinico" />Cuadro básico</label>
           <label className="flex items-center gap-1.5 text-[13px] text-tenue"><input type="checkbox" name="antibiotico" value="1" defaultChecked={sp.antibiotico === '1'} className="h-4 w-4 accent-clinico" />Antibióticos</label>
           <button className="btn-primario">Filtrar</button>
+        </div>
         </div>
       </form>
 
